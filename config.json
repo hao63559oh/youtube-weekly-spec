@@ -1,0 +1,27 @@
+{
+  "region_code": "JP",
+  "relevance_language": "ja",
+  "lookback_days": 7,
+  "max_videos": 40,
+  "sort_by": "publishedAt",
+  "allowlist": { "min_duration_sec": 15 },
+  "discovery": {
+    "enabled": true,
+    "categories": ["1", "10"],
+    "exclude_categories": ["22"],
+    "keywords": [
+      "ショートフィルム", "短編映画", "CM", "テレビCM", "ブランドムービー",
+      "ファッションフィルム", "ミュージックビデオ", "MV", "cinematic 日本"
+    ],
+    "order": "relevance",
+    "search_pages": 1,
+    "min_duration_sec": 30,
+    "max_duration_sec": 1800,
+    "max_candidates": 60,
+    "llm": {
+      "enabled": true,
+      "model": "claude-haiku-4-5",
+      "score_threshold": 65
+    }
+  }
+}

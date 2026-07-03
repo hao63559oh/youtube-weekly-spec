@@ -1,0 +1,57 @@
+name: weekly
+
+# トリガーは schedule と workflow_dispatch のみ（pull_request / pull_request_target は使わない。10.3）。
+on:
+  schedule:
+    - cron: '0 0 * * 1'   # 毎週月曜 00:00 UTC = 09:00 JST
+  workflow_dispatch:
+
+# 付与は contents: write のみ（10.3）。
+permissions:
+  contents: write
+
+# 同時実行を避ける（前回の生成と衝突させない）。
+concurrency:
+  group: weekly
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      # すべての外部 action を SHA 固定（可動タグ禁止。10.3）。
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        # バージョン固定済み requirements.txt。ハッシュ固定 lock を使う場合は
+        # `pip install --require-hashes -r requirements.lock` に置き換える（README 参照）。
+        run: pip install -r requirements.txt
+
+      # 壊れた状態での自動コミットを防ぐテストゲート（11.3）。
+      - name: Unit tests (gate)
+        run: python -m unittest discover -s tests
+
+      - name: Fetch weekly data
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/fetch.py
+
+      # 自動コミットは対象を明示（想定外ファイルを巻き込まない。10.3）。差分が無ければスキップ。
+      - name: Commit & push docs/data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data
+          if git diff --staged --quiet; then
+            echo "差分なし: コミットしません"
+          else
+            git commit -m "data: 週次データ更新 [skip ci]"
+            git push
+          fi

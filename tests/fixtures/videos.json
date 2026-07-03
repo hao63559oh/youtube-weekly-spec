@@ -1,0 +1,137 @@
+{
+  "vidaaaa0001": {
+    "id": "vidaaaa0001",
+    "snippet": {
+      "title": "A作品01 / 監督A",
+      "channelId": "UCaaaaaaaaaaaaaaaaaaaaaa",
+      "channelTitle": "A Studio",
+      "publishedAt": "2026-06-18T10:00:00Z"
+    },
+    "statistics": { "viewCount": "1000", "likeCount": "50" },
+    "contentDetails": { "duration": "PT3M" },
+    "status": { "embeddable": true }
+  },
+  "vidaaaa0002": {
+    "id": "vidaaaa0002",
+    "snippet": {
+      "title": "A作品02（埋め込み不可）",
+      "channelId": "UCaaaaaaaaaaaaaaaaaaaaaa",
+      "channelTitle": "A Studio",
+      "publishedAt": "2026-06-17T10:00:00Z"
+    },
+    "statistics": { "viewCount": "2000", "likeCount": "80" },
+    "contentDetails": { "duration": "PT2M" },
+    "status": { "embeddable": false }
+  },
+  "vidaaaa0003": {
+    "id": "vidaaaa0003",
+    "snippet": {
+      "title": "A作品03（短尺Shorts相当）",
+      "channelId": "UCaaaaaaaaaaaaaaaaaaaaaa",
+      "channelTitle": "A Studio",
+      "publishedAt": "2026-06-16T10:00:00Z"
+    },
+    "statistics": { "viewCount": "300", "likeCount": "10" },
+    "contentDetails": { "duration": "PT8S" },
+    "status": { "embeddable": true }
+  },
+  "vidaaaa0004": {
+    "id": "vidaaaa0004",
+    "snippet": {
+      "title": "A作品04（再生数非公開）",
+      "channelId": "UCaaaaaaaaaaaaaaaaaaaaaa",
+      "channelTitle": "A Studio",
+      "publishedAt": "2026-06-15T10:00:00Z"
+    },
+    "statistics": { "likeCount": "12" },
+    "contentDetails": { "duration": "PT2M" },
+    "status": { "embeddable": true }
+  },
+  "vidbbbb0001": {
+    "id": "vidbbbb0001",
+    "snippet": {
+      "title": "B短編01 / 監督B",
+      "channelId": "UCbbbbbbbbbbbbbbbbbbbbbb",
+      "channelTitle": "B Films",
+      "publishedAt": "2026-06-14T10:00:00Z"
+    },
+    "statistics": { "viewCount": "5000", "likeCount": "200" },
+    "contentDetails": { "duration": "PT10M" },
+    "status": { "embeddable": true }
+  },
+  "discov00001": {
+    "id": "discov00001",
+    "snippet": {
+      "title": "発見作品01 / 監督D",
+      "channelId": "UCdisc1",
+      "channelTitle": "Disc Studio",
+      "publishedAt": "2026-06-17T10:00:00Z",
+      "categoryId": "1",
+      "description": "監督・撮影クレジットありの短編作品。制作: Disc Studio。",
+      "tags": ["短編", "cinematic"]
+    },
+    "statistics": { "viewCount": "8000", "likeCount": "300" },
+    "contentDetails": { "duration": "PT5M" },
+    "status": { "embeddable": true }
+  },
+  "discov00002": {
+    "id": "discov00002",
+    "snippet": {
+      "title": "発見02（People & Blogs）",
+      "channelId": "UCdisc1",
+      "channelTitle": "Disc Studio",
+      "publishedAt": "2026-06-17T11:00:00Z",
+      "categoryId": "22",
+      "description": "vlog 的な日常動画。",
+      "tags": []
+    },
+    "statistics": { "viewCount": "100", "likeCount": "1" },
+    "contentDetails": { "duration": "PT5M" },
+    "status": { "embeddable": true }
+  },
+  "discov00003": {
+    "id": "discov00003",
+    "snippet": {
+      "title": "発見03（短尺）",
+      "channelId": "UCdisc1",
+      "channelTitle": "Disc Studio",
+      "publishedAt": "2026-06-17T12:00:00Z",
+      "categoryId": "1",
+      "description": "短すぎる動画。",
+      "tags": []
+    },
+    "statistics": { "viewCount": "50", "likeCount": "0" },
+    "contentDetails": { "duration": "PT20S" },
+    "status": { "embeddable": true }
+  },
+  "discov00004": {
+    "id": "discov00004",
+    "snippet": {
+      "title": "発見04（埋め込み不可）",
+      "channelId": "UCdisc1",
+      "channelTitle": "Disc Studio",
+      "publishedAt": "2026-06-17T13:00:00Z",
+      "categoryId": "1",
+      "description": "埋め込み不可の作品。",
+      "tags": []
+    },
+    "statistics": { "viewCount": "400", "likeCount": "10" },
+    "contentDetails": { "duration": "PT5M" },
+    "status": { "embeddable": false }
+  },
+  "discov00005": {
+    "id": "discov00005",
+    "snippet": {
+      "title": "発見05（低スコア）",
+      "channelId": "UCdisc1",
+      "channelTitle": "Disc Studio",
+      "publishedAt": "2026-06-17T14:00:00Z",
+      "categoryId": "1",
+      "description": "やってみた系の動画。",
+      "tags": []
+    },
+    "statistics": { "viewCount": "600", "likeCount": "20" },
+    "contentDetails": { "duration": "PT5M" },
+    "status": { "embeddable": true }
+  }
+}

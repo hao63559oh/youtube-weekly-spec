@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-18T00:00:00Z",
+  "items": [
+    {
+      "videoId": "discov00001",
+      "rating": "good",
+      "title": "発見作品01 / 監督D",
+      "channelId": "UCdisc1",
+      "channelTitle": "Disc Studio",
+      "genre": null,
+      "source": "discovery",
+      "week": "2026-W24",
+      "ratedAt": "2026-06-18T00:00:00Z"
+    },
+    {
+      "videoId": "discov00005",
+      "rating": "bad",
+      "title": "発見05（低スコア・やってみた系）",
+      "channelId": "UCdisc1",
+      "channelTitle": "Disc Studio",
+      "genre": null,
+      "source": "discovery",
+      "week": "2026-W24",
+      "ratedAt": "2026-06-17T00:00:00Z"
+    }
+  ]
+}

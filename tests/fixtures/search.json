@@ -1,0 +1,15 @@
+{
+  "テスト検索KW": [
+    {
+      "items": [
+        { "id": { "videoId": "discov00001" }, "snippet": { "channelId": "UCdisc1", "channelTitle": "Disc Studio" } },
+        { "id": { "videoId": "discov00002" }, "snippet": { "channelId": "UCdisc1", "channelTitle": "Disc Studio" } },
+        { "id": { "videoId": "discov00003" }, "snippet": { "channelId": "UCdisc1", "channelTitle": "Disc Studio" } },
+        { "id": { "videoId": "discov00004" }, "snippet": { "channelId": "UCdisc1", "channelTitle": "Disc Studio" } },
+        { "id": { "videoId": "discov00005" }, "snippet": { "channelId": "UCdisc1", "channelTitle": "Disc Studio" } },
+        { "id": { "videoId": "discov00001" }, "snippet": { "channelId": "UCdisc1", "channelTitle": "Disc Studio" } },
+        { "id": { "videoId": "allowdsc001" }, "snippet": { "channelId": "UCaaaaaaaaaaaaaaaaaaaaaa", "channelTitle": "A Studio" } }
+      ]
+    }
+  ]
+}

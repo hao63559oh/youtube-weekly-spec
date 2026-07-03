@@ -1,0 +1,6 @@
+{
+  "channels": [
+    { "channelId": "UCaaaaaaaaaaaaaaaaaaaaaa", "uploadsPlaylistId": "UUaaaaaaaaaaaaaaaaaaaaaa", "name": "A Studio", "genre": "mv", "note": "保存済み uploadsPlaylistId を使う経路" },
+    { "channelId": "UCbbbbbbbbbbbbbbbbbbbbbb", "name": "B Films", "genre": "shortfilm", "note": "uploadsPlaylistId 未保存 → channels.list で解決する経路" }
+  ]
+}

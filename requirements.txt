@@ -1,0 +1,4 @@
+# 依存は最小限（標準ライブラリ中心）。HTTP は requests のみ。
+# セキュリティ要件(10.3)によりバージョンを完全固定する。
+# 可能なら `pip install --require-hashes` 用のハッシュ固定 lock を別途生成する（手順は README に記載予定）。
+requests==2.32.3

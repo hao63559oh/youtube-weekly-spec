@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- セキュリティ(10.5): script/frame/img を必要最小限に限定。
+       frame-src は埋め込み先 youtube-nocookie、img-src はサムネ配信元 i.ytimg.com に限定。 -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' https://i.ytimg.com; frame-src https://www.youtube-nocookie.com; script-src 'self'; style-src 'self'">
+  <title>YouTube PickUp</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-top">
+        <h1 class="site-title">YouTube PickUp</h1>
+        <p class="updated" id="updated"></p>
+      </div>
+      <nav class="controls" aria-label="表示切替">
+        <div class="control">
+          <label for="week-select">週</label>
+          <select id="week-select" aria-label="週を選択"></select>
+        </div>
+        <div class="control">
+          <label for="sort-select">並び替え</label>
+          <select id="sort-select" aria-label="並び替え">
+            <option value="publishedAt">新着</option>
+            <option value="viewCount">再生数</option>
+            <option value="score">スコア</option>
+          </select>
+        </div>
+        <!-- よく使う順タグバー（上位6個・JS で生成）。-->
+        <div class="tag-bar" id="tag-bar" role="group" aria-label="よく使うタグで絞り込み"></div>
+        <!-- 全タグパネルの開閉トグル（🔍）。-->
+        <button type="button" id="tag-toggle" class="tag-toggle"
+                aria-expanded="false" aria-controls="tag-panel" title="すべてのタグ">
+          <svg viewBox="0 0 24 24" class="tag-toggle-icon" aria-hidden="true">
+            <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
+          </svg>
+          <span class="visually-hidden">すべてのタグを開く</span>
+        </button>
+        <div class="control feedback-control">
+          <button type="button" id="export-btn" class="export-btn">フィードバックをエクスポート</button>
+          <span class="feedback-summary" id="feedback-summary" aria-live="polite"></span>
+        </div>
+      </nav>
+      <!-- 全タグパネル（ジャンル/ソース/評価のグループ。JS で生成・🔍 で開閉）。-->
+      <div class="tag-panel" id="tag-panel" role="group" aria-label="すべてのタグ" hidden></div>
+    </div>
+  </header>
+
+  <main>
+    <p class="status" id="status" role="status">読み込み中…</p>
+    <section class="grid" id="grid" aria-label="映像グリッド"></section>
+  </main>
+
+  <footer class="site-footer">
+    <p>公開済み YouTube 動画のサムネ/タイトル/URL のみを扱います。</p>
+  </footer>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
