@@ -1,5 +1,10 @@
 {
-  "updatedAt": "2026-07-03T16:34:56Z",
+  "week": "2026-W27",
+  "period": {
+    "from": "2026-06-26T16:34:56Z",
+    "to": "2026-07-03T16:34:56Z"
+  },
+  "generatedAt": "2026-07-03T16:34:56Z",
   "count": 35,
   "videos": [
     {
@@ -18,8 +23,7 @@
       "genre": null,
       "score": 80,
       "label": "cinematic",
-      "reason": "3Dアニメーション短編、Blender制作、監督・編集・モデリング全てクレジット明記、作品性高い",
-      "week": "2026-W27"
+      "reason": "3Dアニメーション短編、Blender制作、監督・編集・モデリング全てクレジット明記、作品性高い"
     },
     {
       "videoId": "1EJlq5sTBPI",
@@ -37,8 +41,7 @@
       "genre": null,
       "score": 75,
       "label": "cinematic",
-      "reason": "MV兼短編映画、脚本・監督・編集が制作者本人、シンガーソングライター作品",
-      "week": "2026-W27"
+      "reason": "MV兼短編映画、脚本・監督・編集が制作者本人、シンガーソングライター作品"
     },
     {
       "videoId": "Glf6_Lq9C2s",
@@ -56,8 +59,7 @@
       "genre": null,
       "score": 80,
       "label": "cinematic",
-      "reason": "ぽっけフィルムの制作、vol.97、完全スタッフクレジット、制作会社明記",
-      "week": "2026-W27"
+      "reason": "ぽっけフィルムの制作、vol.97、完全スタッフクレジット、制作会社明記"
     },
     {
       "videoId": "1cPQ2Hwi-Fc",
@@ -75,8 +77,7 @@
       "genre": null,
       "score": 85,
       "label": "cinematic",
-      "reason": "予告編だが制作グループ「和み」、4K・ヒューマンドラマ、監督クレジット",
-      "week": "2026-W27"
+      "reason": "予告編だが制作グループ「和み」、4K・ヒューマンドラマ、監督クレジット"
     },
     {
       "videoId": "eN6641E4AuY",
@@ -94,8 +95,7 @@
       "genre": null,
       "score": 90,
       "label": "cinematic",
-      "reason": "完全な制作体制、企画Vol.533、複数プロデューサー、機材協力記載",
-      "week": "2026-W27"
+      "reason": "完全な制作体制、企画Vol.533、複数プロデューサー、機材協力記載"
     },
     {
       "videoId": "0v78WbIc4BM",
@@ -113,8 +113,7 @@
       "genre": null,
       "score": 70,
       "label": "cinematic",
-      "reason": "企業アイス商品CM、VTuber・初音ミク起用、楽曲新作、ブランドカラー活用、制作質高",
-      "week": "2026-W27"
+      "reason": "企業アイス商品CM、VTuber・初音ミク起用、楽曲新作、ブランドカラー活用、制作質高"
     },
     {
       "videoId": "qWvSlWvobBk",
@@ -132,8 +131,7 @@
       "genre": null,
       "score": 65,
       "label": "cinematic",
-      "reason": "企業WEB-CM、パチンコゲーム宣伝だが映像制作クレジット、プロモーション動画としての品質",
-      "week": "2026-W27"
+      "reason": "企業WEB-CM、パチンコゲーム宣伝だが映像制作クレジット、プロモーション動画としての品質"
     },
     {
       "videoId": "ddF9P0N5Wuo",
@@ -151,8 +149,7 @@
       "genre": null,
       "score": 68,
       "label": "uncertain",
-      "reason": "ショートドラマだが、武田塾の教育機関チャンネル、商業的PR",
-      "week": "2026-W27"
+      "reason": "ショートドラマだが、武田塾の教育機関チャンネル、商業的PR"
     },
     {
       "videoId": "FAIS6Q9lIgg",
@@ -170,8 +167,7 @@
       "genre": null,
       "score": 72,
       "label": "cinematic",
-      "reason": "ショートドラマ・ショートフィルム標榜、制作クレジット、縦型映画",
-      "week": "2026-W27"
+      "reason": "ショートドラマ・ショートフィルム標榜、制作クレジット、縦型映画"
     },
     {
       "videoId": "F5bYsjVMU00",
@@ -189,8 +185,7 @@
       "genre": null,
       "score": 68,
       "label": "cinematic",
-      "reason": "企業観光施設CM、アイドルグループ出演、自然ロケーション、メイキング・特設サイト完備",
-      "week": "2026-W27"
+      "reason": "企業観光施設CM、アイドルグループ出演、自然ロケーション、メイキング・特設サイト完備"
     },
     {
       "videoId": "98YglZiYa4w",
@@ -208,8 +203,7 @@
       "genre": null,
       "score": 72,
       "label": "cinematic",
-      "reason": "企業TV-CM、有名俳優出演、監督がいる制作、ナレーション神木隆之介、商品プロモーションながら制作品質高",
-      "week": "2026-W27"
+      "reason": "企業TV-CM、有名俳優出演、監督がいる制作、ナレーション神木隆之介、商品プロモーションながら制作品質高"
     },
     {
       "videoId": "bs4UKNk5gjI",
@@ -227,8 +221,7 @@
       "genre": null,
       "score": 83,
       "label": "cinematic",
-      "reason": "ショートかよ。シリーズ、監督/脚本/撮影/編集明記、映画かよ。製作",
-      "week": "2026-W27"
+      "reason": "ショートかよ。シリーズ、監督/脚本/撮影/編集明記、映画かよ。製作"
     },
     {
       "videoId": "HgOYeOgU3F4",
@@ -246,8 +239,7 @@
       "genre": null,
       "score": 89,
       "label": "cinematic",
-      "reason": "短編映画（縦型）、企画Vol.532、企業タイアップ、充実クレジット",
-      "week": "2026-W27"
+      "reason": "短編映画（縦型）、企画Vol.532、企業タイアップ、充実クレジット"
     },
     {
       "videoId": "3I2CJwfk73I",
@@ -265,8 +257,7 @@
       "genre": null,
       "score": 70,
       "label": "cinematic",
-      "reason": "ビール企業新CM、有名俳優出演、夏祭りロケーション、商品プロモーション制作品質高",
-      "week": "2026-W27"
+      "reason": "ビール企業新CM、有名俳優出演、夏祭りロケーション、商品プロモーション制作品質高"
     },
     {
       "videoId": "CFyRy-Ss6ds",
@@ -284,8 +275,7 @@
       "genre": null,
       "score": 78,
       "label": "cinematic",
-      "reason": "短編映画と明記、脚本・撮影・編集・監督・出演クレジット、自主制作ショートフィルム、制作年記載",
-      "week": "2026-W27"
+      "reason": "短編映画と明記、脚本・撮影・編集・監督・出演クレジット、自主制作ショートフィルム、制作年記載"
     },
     {
       "videoId": "xF2YCzbvy6Q",
@@ -303,8 +293,7 @@
       "genre": null,
       "score": 75,
       "label": "cinematic",
-      "reason": "actionfilm標榜、短編映画、専門的なマーシャルアーツ制作",
-      "week": "2026-W27"
+      "reason": "actionfilm標榜、短編映画、専門的なマーシャルアーツ制作"
     },
     {
       "videoId": "HdcavJq0hV8",
@@ -322,8 +311,7 @@
       "genre": null,
       "score": 65,
       "label": "uncertain",
-      "reason": "ショートショート映画的だが、心霊系YouTuber、個人制作感",
-      "week": "2026-W27"
+      "reason": "ショートショート映画的だが、心霊系YouTuber、個人制作感"
     },
     {
       "videoId": "w2s0WBu-PWA",
@@ -341,8 +329,7 @@
       "genre": null,
       "score": 70,
       "label": "cinematic",
-      "reason": "AI短編映画と明記、シリーズ制作、神話・ファンタジー設定、音楽配信あり",
-      "week": "2026-W27"
+      "reason": "AI短編映画と明記、シリーズ制作、神話・ファンタジー設定、音楽配信あり"
     },
     {
       "videoId": "BmROVRdhRuY",
@@ -360,8 +347,7 @@
       "genre": null,
       "score": 91,
       "label": "cinematic",
-      "reason": "短編映画（縦型）、制作会社・プロデューサー明記、企画Vol.531",
-      "week": "2026-W27"
+      "reason": "短編映画（縦型）、制作会社・プロデューサー明記、企画Vol.531"
     },
     {
       "videoId": "Dn_WcSDQ1MA",
@@ -379,8 +365,7 @@
       "genre": null,
       "score": 88,
       "label": "cinematic",
-      "reason": "短編映画トレーラー、明確な脚本監督・撮影・編集等クレジット、作品性高い設定と背景説明",
-      "week": "2026-W27"
+      "reason": "短編映画トレーラー、明確な脚本監督・撮影・編集等クレジット、作品性高い設定と背景説明"
     },
     {
       "videoId": "JIM_oMch0_0",
@@ -398,8 +383,7 @@
       "genre": null,
       "score": 75,
       "label": "cinematic",
-      "reason": "企業眼鏡CM、アーティストMrs. GREEN APPLE出演、新曲起用、メイキング付き、制作品質高",
-      "week": "2026-W27"
+      "reason": "企業眼鏡CM、アーティストMrs. GREEN APPLE出演、新曲起用、メイキング付き、制作品質高"
     },
     {
       "videoId": "o_e6Wyk38MI",
@@ -417,8 +401,7 @@
       "genre": null,
       "score": 72,
       "label": "cinematic",
-      "reason": "ショートフィルム・短編映画標榜、ドラマとしての構成",
-      "week": "2026-W27"
+      "reason": "ショートフィルム・短編映画標榜、ドラマとしての構成"
     },
     {
       "videoId": "s-n55NN8YCk",
@@ -436,8 +419,7 @@
       "genre": null,
       "score": 75,
       "label": "cinematic",
-      "reason": "短編映画AI制作、歴史ドラマ、生成AI使用明記、英文説明付き、制作意図が明確",
-      "week": "2026-W27"
+      "reason": "短編映画AI制作、歴史ドラマ、生成AI使用明記、英文説明付き、制作意図が明確"
     },
     {
       "videoId": "8ZE59_IJmfA",
@@ -455,8 +437,7 @@
       "genre": null,
       "score": 68,
       "label": "cinematic",
-      "reason": "キャリー製品CM、歌舞伎俳優の子息出演、ジャズダンスパフォーマンス、制作質高",
-      "week": "2026-W27"
+      "reason": "キャリー製品CM、歌舞伎俳優の子息出演、ジャズダンスパフォーマンス、制作質高"
     },
     {
       "videoId": "5hBdBU49PgQ",
@@ -474,8 +455,7 @@
       "genre": null,
       "score": 68,
       "label": "cinematic",
-      "reason": "War Thunder短編映画、歴史ドラマ、詳細な背景設定、制作意図明確、映画的ナレーション",
-      "week": "2026-W27"
+      "reason": "War Thunder短編映画、歴史ドラマ、詳細な背景設定、制作意図明確、映画的ナレーション"
     },
     {
       "videoId": "UcA-IhVEjAE",
@@ -493,8 +473,7 @@
       "genre": null,
       "score": 70,
       "label": "cinematic",
-      "reason": "テーマパーク周年CM、有名俳優出演、映像制作質高、キャンペーン企画",
-      "week": "2026-W27"
+      "reason": "テーマパーク周年CM、有名俳優出演、映像制作質高、キャンペーン企画"
     },
     {
       "videoId": "-UVKMMRAKpY",
@@ -512,8 +491,7 @@
       "genre": null,
       "score": 82,
       "label": "cinematic",
-      "reason": "短編映画・ショートフィルム標榜、出演者クレジット、音源明記",
-      "week": "2026-W27"
+      "reason": "短編映画・ショートフィルム標榜、出演者クレジット、音源明記"
     },
     {
       "videoId": "Pe9c0tpu9Q8",
@@ -531,8 +509,7 @@
       "genre": null,
       "score": 91,
       "label": "cinematic",
-      "reason": "短編映画（縦型）、企画Vol.530、充実クレジット、制作会社明記",
-      "week": "2026-W27"
+      "reason": "短編映画（縦型）、企画Vol.530、充実クレジット、制作会社明記"
     },
     {
       "videoId": "8fS6LYjcWQY",
@@ -550,8 +527,7 @@
       "genre": null,
       "score": 82,
       "label": "cinematic",
-      "reason": "短編ファンフィルム予告、監督・脚本・キャストクレジット、時代劇コスプレ企画、ロケ地協力明記",
-      "week": "2026-W27"
+      "reason": "短編ファンフィルム予告、監督・脚本・キャストクレジット、時代劇コスプレ企画、ロケ地協力明記"
     },
     {
       "videoId": "Awc5_oeN4Ug",
@@ -569,8 +545,7 @@
       "genre": null,
       "score": 73,
       "label": "cinematic",
-      "reason": "ショートドラマ・ショートフィルム標榜、制作体制有、ごっこ倶楽部作品",
-      "week": "2026-W27"
+      "reason": "ショートドラマ・ショートフィルム標榜、制作体制有、ごっこ倶楽部作品"
     },
     {
       "videoId": "TM4TJxKUynk",
@@ -588,8 +563,7 @@
       "genre": null,
       "score": 78,
       "label": "cinematic",
-      "reason": "短編ドラマとしての構成、SF要素、映画的余韻を標榜、制作体制あり",
-      "week": "2026-W27"
+      "reason": "短編ドラマとしての構成、SF要素、映画的余韻を標榜、制作体制あり"
     },
     {
       "videoId": "NRJu8DPZ4MM",
@@ -607,8 +581,7 @@
       "genre": null,
       "score": 72,
       "label": "cinematic",
-      "reason": "AI短編映画と明記、4K解像度、SF/ファンタジー作品タイトル、制作に注力するクリエイティブなコンテンツ",
-      "week": "2026-W27"
+      "reason": "AI短編映画と明記、4K解像度、SF/ファンタジー作品タイトル、制作に注力するクリエイティブなコンテンツ"
     },
     {
       "videoId": "VAYjtzMY59U",
@@ -626,8 +599,7 @@
       "genre": null,
       "score": 92,
       "label": "cinematic",
-      "reason": "充実した制作クレジット、企画Vol.番号、制作会社明記、シネマティック標榜",
-      "week": "2026-W27"
+      "reason": "充実した制作クレジット、企画Vol.番号、制作会社明記、シネマティック標榜"
     },
     {
       "videoId": "Flg6XHvqq1U",
@@ -645,8 +617,7 @@
       "genre": null,
       "score": 92,
       "label": "cinematic",
-      "reason": "こねこフィルムの正規作品、充実クレジット、短編映画標榜",
-      "week": "2026-W27"
+      "reason": "こねこフィルムの正規作品、充実クレジット、短編映画標榜"
     },
     {
       "videoId": "R1tuUW7aDGI",
@@ -664,8 +635,7 @@
       "genre": null,
       "score": 85,
       "label": "cinematic",
-      "reason": "短編映画予告編、複数国際映画祭選出/受賞実績、制作作品としての信用度高い",
-      "week": "2026-W27"
+      "reason": "短編映画予告編、複数国際映画祭選出/受賞実績、制作作品としての信用度高い"
     }
   ]
 }

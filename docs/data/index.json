@@ -1,4 +1,10 @@
 {
-  "updatedAt": "",
-  "weeks": []
+  "updatedAt": "2026-07-03T16:34:56Z",
+  "weeks": [
+    {
+      "week": "2026-W27",
+      "count": 35,
+      "generatedAt": "2026-07-03T16:34:56Z"
+    }
+  ]
 }
