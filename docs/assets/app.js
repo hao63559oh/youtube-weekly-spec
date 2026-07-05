@@ -363,10 +363,22 @@
   }
 
   function buildThumb(button) {
-    // dataset から img + 再生バッジを組み立てる（再生→停止の復元にも使う）。
+    // dataset から img + 再生バッジを組み立てる。
+    // 高解像度サムネ(maxresdefault 1280x720)を優先し、無い動画は hqdefault にフォールバック
+    // （横長カードで拡大されても荒れないように。CSP img-src は i.ytimg.com のまま）。
     button.textContent = "";
     var img = document.createElement("img");
-    img.src = button.dataset.thumb;
+    var vid = button.dataset.videoId;
+    var fallback = button.dataset.thumb || "";
+    if (isValidVideoId(vid)) {
+      img.src = "https://i.ytimg.com/vi/" + vid + "/maxresdefault.jpg";
+      img.addEventListener("error", function onErr() {
+        img.removeEventListener("error", onErr); // フォールバックは1回だけ（無限ループ防止）
+        if (fallback && img.src !== fallback) img.src = fallback;
+      });
+    } else {
+      img.src = fallback;
+    }
     img.alt = button.dataset.title || "";
     img.loading = "lazy";
     button.appendChild(img);
