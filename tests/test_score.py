@@ -34,9 +34,26 @@ class TestValidateResults(unittest.TestCase):
         self.valid_ids = {"vidaaaa0001", "vidaaaa0002"}
 
     def test_valid_row_kept(self):
-        rows = [{"videoId": "vidaaaa0001", "score": 80, "label": "cinematic", "reason": "監督名あり"}]
+        rows = [{"videoId": "vidaaaa0001", "score": 80, "label": "cinematic", "reason": "監督名あり",
+                 "genre": "cm"}]
         out = score.validate_results(rows, self.valid_ids, set(), 60)
-        self.assertEqual(out, {"vidaaaa0001": {"score": 80, "label": "cinematic", "reason": "監督名あり"}})
+        self.assertEqual(out, {"vidaaaa0001": {"score": 80, "label": "cinematic",
+                                               "reason": "監督名あり", "genre": "cm"}})
+
+    def test_genre_missing_or_invalid_becomes_none(self):
+        # genre 欠落・enum外・"other" は None に倒す（fail-open：行は残す）。
+        for g in (None, "other", "unknown", "MV"):
+            row = {"videoId": "vidaaaa0001", "score": 80, "label": "cinematic", "reason": "r"}
+            if g is not None:
+                row["genre"] = g
+            out = score.validate_results([row], self.valid_ids, set(), 60)
+            self.assertEqual(out["vidaaaa0001"]["genre"], None)
+
+    def test_genre_valid_kept(self):
+        for g in ("mv", "shortfilm", "cm", "brand", "animation"):
+            row = {"videoId": "vidaaaa0001", "score": 80, "label": "cinematic", "reason": "r", "genre": g}
+            out = score.validate_results([row], self.valid_ids, set(), 60)
+            self.assertEqual(out["vidaaaa0001"]["genre"], g)
 
     def test_unknown_videoid_dropped(self):
         rows = [{"videoId": "zzzzzzzzzzz", "score": 80, "label": "cinematic", "reason": "x"}]

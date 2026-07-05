@@ -236,7 +236,6 @@
   }
 
   // ---- DOM 描画（ブラウザ実行時のみ） ------------------------------------
-  var activePlayer = null;   // 現在 iframe 再生中の .card-media（同時再生防止）。
   var currentVideos = [];    // 現在表示中の全動画（フィルタ/並び替え前）。
   var selectedTags = [];     // 選択中タグ key（空＝全件。ジャンル/ソース/評価の統一）。
   var tagUsage = {};         // タグ key -> 使用回数（localStorage 永続。よく使う順バー用）。
@@ -377,26 +376,32 @@
     button.classList.remove("playing");
   }
 
-  function restorePlayer(button) {
-    if (button) buildThumb(button);
+  // 再生モーダルを開く（クリックしたカードの動画を中央に大きく再生。背景暗転で周囲を隠す）。
+  function openPlayer(videoId, title) {
+    // iframe 生成前に videoId を検証（不正なら再生しない＝URL注入防止。10.1）。
+    if (!isValidVideoId(videoId)) return;
+    var modal = document.getElementById("player-modal");
+    var embed = document.getElementById("player-embed");
+    if (!modal || !embed) return;
+    embed.textContent = "";
+    var iframe = document.createElement("iframe");
+    iframe.src = embedUrl(videoId);
+    iframe.title = title || "";
+    iframe.setAttribute("allow", "autoplay; encrypted-media; fullscreen");
+    iframe.setAttribute("allowfullscreen", "");
+    embed.appendChild(iframe);
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
   }
 
-  function playInCard(button) {
-    var vid = button.dataset.videoId;
-    // iframe 生成前に videoId を検証（不正なら再生しない＝URL注入防止。10.1）。
-    if (!isValidVideoId(vid)) return;
-    if (activePlayer && activePlayer !== button) {
-      restorePlayer(activePlayer); // 別カード再生時に前の iframe をサムネに戻す（4.2）。
-    }
-    button.textContent = "";
-    var iframe = document.createElement("iframe");
-    iframe.src = embedUrl(vid);
-    iframe.title = button.dataset.title || "";
-    iframe.setAttribute("allow", "autoplay; encrypted-media");
-    iframe.setAttribute("allowfullscreen", "");
-    button.appendChild(iframe);
-    button.classList.add("playing");
-    activePlayer = button;
+  // モーダルを閉じる（iframe を破棄して再生停止）。
+  function closePlayer() {
+    var modal = document.getElementById("player-modal");
+    var embed = document.getElementById("player-embed");
+    if (!modal || !embed) return;
+    embed.textContent = ""; // iframe 破棄で再生停止
+    modal.hidden = true;
+    document.body.classList.remove("modal-open");
   }
 
   function copyText(text) {
@@ -417,6 +422,12 @@
         resolve();
       } catch (e) { reject(e); }
     });
+  }
+
+  // ジャンル値 → 表示ラベル（タグバーの表記 MV/短編/CM/ブランド/アニメ と統一）。
+  var GENRE_LABELS = { mv: "MV", shortfilm: "短編", cm: "CM", brand: "ブランド", animation: "アニメ" };
+  function genreLabel(value) {
+    return GENRE_LABELS[value] || value;
   }
 
   function createBadge(text, extraClass) {
@@ -441,7 +452,9 @@
     media.dataset.title = video.title || "";
     buildThumb(media);
     if (validId) {
-      media.addEventListener("click", function () { playInCard(media); });
+      media.addEventListener("click", function () {
+        openPlayer(media.dataset.videoId, media.dataset.title);
+      });
     } else {
       media.disabled = true;
     }
@@ -470,7 +483,7 @@
     // 横断ビューでは各カードに週バッジ（どの週の作品か一目で分かるように）。
     if (allMode && video.week) meta.appendChild(createBadge(video.week, "week-badge"));
     if (video.source) meta.appendChild(createBadge(video.source));
-    if (video.genre) meta.appendChild(createBadge(video.genre));
+    if (video.genre) meta.appendChild(createBadge(genreLabel(video.genre), "genre-badge"));
     if (video.source === "discovery" && typeof video.score === "number") {
       meta.appendChild(createBadge("score " + video.score, "badge-score"));
     }
@@ -537,7 +550,7 @@
   function renderGrid(videos) {
     var grid = document.getElementById("grid");
     grid.textContent = "";
-    activePlayer = null;
+    closePlayer(); // 週/絞り込み切替などの再描画時はモーダルを閉じる
     if (!videos || videos.length === 0) {
       setStatus("条件に一致する映像がありません。");
       return;
@@ -727,6 +740,15 @@
     var exportBtn = document.getElementById("export-btn");
     if (exportBtn) exportBtn.addEventListener("click", exportFeedback);
     updateFeedbackSummary();
+
+    // 再生モーダル: ×ボタン / 背景クリック / Escape で閉じる。
+    var playerClose = document.getElementById("player-close");
+    var playerBackdrop = document.getElementById("player-backdrop");
+    if (playerClose) playerClose.addEventListener("click", closePlayer);
+    if (playerBackdrop) playerBackdrop.addEventListener("click", closePlayer);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closePlayer();
+    });
 
     fetch("data/index.json")
       .then(function (r) {

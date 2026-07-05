@@ -430,6 +430,66 @@ select {
 .card-media.playing ~ .card-feedback,
 .card-media.playing ~ .card-actions { display: none; }
 
+/* ===== 再生モーダル（全画面プレイヤー） ===== */
+.player-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.player-modal[hidden] { display: none; }
+.player-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 2, 4, 0.9);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.player-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(1100px, 94vw);
+}
+.player-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+.player-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.player-close {
+  position: absolute;
+  top: -2.75rem;
+  right: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.player-close:hover { background: var(--accent); border-color: var(--accent); }
+/* モーダル表示中は背景スクロールを止める */
+body.modal-open { overflow: hidden; }
+
 /* ===== 統一タグ（よく使う順バー / 🔍トグル / 全タグパネル） ===== */
 /* タグボタンは既存 .chip を再利用（ピル形状・active ハイライト）。 */
 .tag-bar {

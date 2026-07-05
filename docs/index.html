@@ -59,6 +59,15 @@
     <p>公開済み YouTube 動画のサムネ/タイトル/URL のみを扱います。</p>
   </footer>
 
+  <!-- 再生モーダル（クリックで中央に大きく再生・背景暗転で周囲を隠す。JS で iframe 差し込み）。 -->
+  <div class="player-modal" id="player-modal" hidden>
+    <div class="player-backdrop" id="player-backdrop"></div>
+    <div class="player-dialog" role="dialog" aria-modal="true" aria-label="動画プレイヤー">
+      <button type="button" class="player-close" id="player-close" aria-label="閉じる">×</button>
+      <div class="player-embed" id="player-embed"></div>
+    </div>
+  </div>
+
   <script src="assets/app.js"></script>
 </body>
 </html>

@@ -381,7 +381,7 @@ def collect_discovery_videos(client, config: dict, channels: list, after: dateti
         logger.warning("LLM採点に失敗。discovery を空にして継続: %s", e)
         return []
 
-    # 6: 閾値フィルタ → 動画オブジェクト化（source=discovery, genre=null, score/label/reason 付与）。
+    # 6: 閾値フィルタ → 動画オブジェクト化（source=discovery, genre=LLM分類, score/label/reason 付与）。
     threshold = (disc.get("llm") or {}).get("score_threshold", 65)
     item_by_id = {item.get("id"): item for item, _ in filtered}
     videos: list = []
@@ -391,7 +391,8 @@ def collect_discovery_videos(client, config: dict, channels: list, after: dateti
         item = item_by_id.get(vid)
         if not item:
             continue
-        v = build_video_object(item, source="discovery", genre=None)
+        # genre は LLM 分類（mv/shortfilm/cm/brand/animation）。未分類は None（タグ無し）。
+        v = build_video_object(item, source="discovery", genre=result.get("genre"))
         v["score"] = result["score"]
         v["label"] = result["label"]
         v["reason"] = result["reason"]

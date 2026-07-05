@@ -37,6 +37,10 @@ ANTHROPIC_VERSION = "2023-06-01"
 # 採点ラベル（spec 3.5 のスキーマ enum）。
 VALID_LABELS = {"cinematic", "uncertain", "casual"}
 
+# ジャンル分類（UIタグ MV/短編/CM/ブランド/アニメ ＝ allowlist の genre 値と統一）。
+# LLM は "other" も返しうるが、その場合はタグ無し（None）に倒す。
+VALID_GENRES = {"mv", "shortfilm", "cm", "brand", "animation"}
+
 # 任意の config 上書きが無い場合の既定値（config.json には載せず code 既定とする）。
 DEFAULT_MODEL = "claude-haiku-4-5"
 DEFAULT_MAX_TOKENS = 8000
@@ -57,12 +61,14 @@ RESULT_SCHEMA = {
             "items": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["videoId", "score", "label", "reason"],
+                "required": ["videoId", "score", "label", "reason", "genre"],
                 "properties": {
                     "videoId": {"type": "string"},
                     "score": {"type": "integer"},
                     "label": {"type": "string", "enum": ["cinematic", "uncertain", "casual"]},
                     "reason": {"type": "string"},
+                    "genre": {"type": "string",
+                              "enum": ["mv", "shortfilm", "cm", "brand", "animation", "other"]},
                 },
             },
         }
@@ -89,7 +95,17 @@ SYSTEM_PROMPT = (
     "評価する（個人制作の混入を抑える）。ただしジャンル（ショートドラマ/縦型/AI等）そのものは減点理由に"
     "しない。\n"
     "\n"
-    "各候補について score(0–100 の整数) / label(cinematic|uncertain|casual) / reason(日本語30字以内) を付け、"
+    "\n"
+    "ジャンル分類（genre）: 各候補を用途で1つに分類する（タイトル/説明/タグ/カテゴリから判断）。\n"
+    "- mv: ミュージックビデオ／MV\n"
+    "- shortfilm: ショートフィルム・短編映画・短編ドラマ\n"
+    "- cm: CM・広告（テレビCM／WebCM）\n"
+    "- brand: ブランドフィルム・企業ブランドムービー\n"
+    "- animation: アニメーション作品\n"
+    "- other: 上記のいずれにも当てはまらない\n"
+    "\n"
+    "各候補について score(0–100 の整数) / label(cinematic|uncertain|casual) / reason(日本語30字以内) / "
+    "genre(mv|shortfilm|cm|brand|animation|other) を付け、"
     "入力の videoId をそのまま使って results に全件返してください。\n"
     "\n"
     "<preferences> ブロックがある場合、それは本サイトの作者が過去に good（特に求めている）/"
@@ -236,7 +252,8 @@ def validate_results(raw_results: list, valid_ids: set, seen: set, max_reason_ch
     """LLM 出力を fail-closed 検証する（spec 3.5 / 10.4）。
 
     破棄条件：videoId が入力候補に無い/重複、score が int で 0–100 外、label が enum 外、
-    reason が空/長すぎ。返り値: {videoId: {"score","label","reason"}}（妥当な行のみ）。
+    reason が空/長すぎ。genre は妥当なUIジャンル以外なら None（fail-open・行は残す）。
+    返り値: {videoId: {"score","label","reason","genre"}}（妥当な行のみ）。
     """
     out: dict = {}
     for row in raw_results:
@@ -258,8 +275,12 @@ def validate_results(raw_results: list, valid_ids: set, seen: set, max_reason_ch
         reason = reason.strip()
         if not (0 < len(reason) <= max_reason_chars):
             continue
+        # genre は補助メタ（タグ表示用）。妥当なUIジャンル以外（other/欠落/不正）は None に倒す
+        # ＝ genre 不正でも行は棄却しない（fail-open）。
+        genre = row.get("genre")
+        genre = genre if genre in VALID_GENRES else None
         seen.add(vid)
-        out[vid] = {"score": score, "label": label, "reason": reason}
+        out[vid] = {"score": score, "label": label, "reason": reason, "genre": genre}
     return out
 
 
