@@ -10,15 +10,17 @@
     "categories": ["1", "10"],
     "exclude_categories": ["22"],
     "keywords": [
-      "CM", "テレビCM", "WEBCM", "企業CM", "ブランドムービー", "ブランドフィルム",
-      "コーポレートムービー", "プロモーションムービー", "商品プロモーション",
-      "ファッションフィルム", "ミュージックビデオ", "MV"
+      "CM", "テレビCM", "WEBCM", "企業CM",
+      "ミュージックビデオ", "MV", "新曲MV", "official music video",
+      "ブランドフィルム", "コーポレートムービー", "プロモーションムービー", "ファッションフィルム"
     ],
     "order": "relevance",
     "search_pages": 1,
-    "min_duration_sec": 30,
-    "max_duration_sec": 1800,
-    "max_candidates": 60,
+    "min_duration_sec": 15,
+    "max_duration_sec": 600,
+    "max_candidates": 80,
+    "max_per_channel": 2,
+    "genre_ratio": { "cm": 0.4, "mv": 0.4, "other": 0.2 },
     "llm": {
       "enabled": true,
       "model": "claude-haiku-4-5",

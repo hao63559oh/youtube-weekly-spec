@@ -240,6 +240,71 @@ def _chunk(seq: list, size: int) -> Iterable[list]:
         yield seq[i:i + size]
 
 
+def _round_robin(lists: list) -> list:
+    """複数リストを先頭から1件ずつ交互に取り出して1本に統合する（各リストを均等に代表させる）。"""
+    out: list = []
+    i = 0
+    while any(i < len(lst) for lst in lists):
+        for lst in lists:
+            if i < len(lst):
+                out.append(lst[i])
+        i += 1
+    return out
+
+
+def _genre_bucket(genre) -> str:
+    """ジャンル比率用のバケット化。cm/mv 以外（brand/animation/shortfilm/None）は 'other'。"""
+    return genre if genre in ("cm", "mv") else "other"
+
+
+def select_by_ratio(videos: list, max_videos: int, max_per_channel: int = 2,
+                    genre_ratio: Optional[dict] = None) -> list:
+    """スコア降順で、同一チャンネル上限とジャンル比率(cm/mv/other)を満たすよう最終選定する（3.9）。
+
+    - まず同一 channelId は max_per_channel 件までに制限（スコア上位を残す）。
+    - 次に genre_ratio（例 cm:0.4/mv:0.4/other:0.2）で各バケットの枠を割り当て、
+      バケット内スコア上位から埋める。埋まらない枠は残りをスコア順で再配分する（比率は「程度」）。
+    - 返り値はスコア降順・最大 max_videos 件。
+    """
+    ratio = genre_ratio or {"cm": 0.4, "mv": 0.4, "other": 0.2}
+    ranked = sorted(videos, key=lambda v: -(v.get("score") or 0))
+
+    # 1) 同一チャンネル上限
+    per_ch: dict = {}
+    capped: list = []
+    for v in ranked:
+        ch = v.get("channelId") or ""
+        if per_ch.get(ch, 0) >= max_per_channel:
+            continue
+        per_ch[ch] = per_ch.get(ch, 0) + 1
+        capped.append(v)
+
+    # 2) ジャンル比率で枠割り当て（バケット別にスコア上位から）
+    by_bucket: dict = {"cm": [], "mv": [], "other": []}
+    for v in capped:
+        by_bucket[_genre_bucket(v.get("genre"))].append(v)
+
+    selected: list = []
+    used: set = set()
+    for bucket, frac in ratio.items():
+        target = int(round(max_videos * frac))
+        for v in by_bucket.get(bucket, [])[:target]:
+            selected.append(v)
+            used.add(v["videoId"])
+
+    # 3) 残枠はスコア順で再配分（比率で埋まらなかった分）
+    if len(selected) < max_videos:
+        for v in capped:
+            if v["videoId"] in used:
+                continue
+            selected.append(v)
+            used.add(v["videoId"])
+            if len(selected) >= max_videos:
+                break
+
+    return sorted(selected, key=lambda v: -(v.get("score") or 0))[:max_videos]
+
+
 def collect_allowlist_videos(client, channels: list, config: dict, after: datetime, before: datetime) -> list:
     """allowlist 全チャンネルから期間内動画を集め、詳細統合・フィルタして動画オブジェクト化する。"""
     uploads_map = resolve_uploads_map(channels, client.channels_uploads)
@@ -321,9 +386,12 @@ def collect_discovery_videos(client, config: dict, channels: list, after: dateti
     allow_channel_ids = {c.get("channelId") for c in channels if c.get("channelId")}
 
     # 1+2: search（part=snippet）→ 前段フィルタ（videoId 重複排除・allowlist チャンネル除外）。
-    candidate_ids: list = []
+    # キーワードごとに ID を集め、最後にラウンドロビンで均等統合する（後方キーワード＝MV等が
+    # max_candidates 上限で切られてジャンルが偏るのを防ぐ。3.4）。
+    per_kw_ids: list = []
     seen: set = set()
     for kw in keywords:
+        ids_for_kw: list = []
         page_token = None
         for _ in range(search_pages):
             page = client.search(kw, published_after, order, region, lang, page_token)
@@ -335,11 +403,14 @@ def collect_discovery_videos(client, config: dict, channels: list, after: dateti
                 if channel_id in allow_channel_ids:
                     continue  # allowlist 分は収集済み。
                 seen.add(vid)
-                candidate_ids.append(vid)
+                ids_for_kw.append(vid)
             page_token = page.get("nextPageToken")
             if not page_token:
                 break
-    logger.info("discovery 前段: 候補 videoId=%d", len(candidate_ids))
+        per_kw_ids.append(ids_for_kw)
+    candidate_ids = _round_robin(per_kw_ids)
+    logger.info("discovery 前段: 候補 videoId=%d（%dキーワードを均等統合）",
+                len(candidate_ids), len(per_kw_ids))
     if not candidate_ids:
         return []
 
@@ -709,13 +780,23 @@ def run(config: dict, allowlist: dict, client, now: datetime, score_client=None,
     discovery_videos = collect_discovery_videos(client, config, channels, after, before,
                                                 score_client=score_client, feedback=feedback)
 
-    merged = merge_and_dedupe(allowlist_videos, discovery_videos)
+    max_videos = config.get("max_videos", 40)
+    disc = config.get("discovery") or {}
+    # discovery は「同一チャンネル上限＋ジャンル比率(CM/MV/その他)」で選定する（3.9）。
+    # allowlist は作者が明示登録した curated なのでそのまま統合する。
+    selected_discovery = select_by_ratio(
+        discovery_videos, max_videos,
+        max_per_channel=disc.get("max_per_channel", 2),
+        genre_ratio=disc.get("genre_ratio"),
+    )
+    merged = merge_and_dedupe(allowlist_videos, selected_discovery)
     ordered = sort_videos(merged, config.get("sort_by", "publishedAt"))
-    final = ordered[: config.get("max_videos", 40)]
+    final = ordered[:max_videos]
 
     logger.info(
-        "収集結果: allowlist=%d discovery=%d 統合=%d 採用=%d",
-        len(allowlist_videos), len(discovery_videos), len(merged), len(final),
+        "収集結果: allowlist=%d discovery=%d(選定%d) 統合=%d 採用=%d",
+        len(allowlist_videos), len(discovery_videos), len(selected_discovery),
+        len(merged), len(final),
     )
     if not final:
         return None

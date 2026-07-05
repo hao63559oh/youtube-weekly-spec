@@ -450,5 +450,56 @@ class TestIndexKeepPast(unittest.TestCase):
             self.assertEqual(w25["count"], 9)
 
 
+class TestRoundRobin(unittest.TestCase):
+    def test_interleaves_evenly(self):
+        self.assertEqual(fetch._round_robin([[1, 2, 3], ["a", "b"], ["x"]]),
+                         [1, "a", "x", 2, "b", 3])
+
+    def test_empty_and_uneven(self):
+        self.assertEqual(fetch._round_robin([[], [1], [2, 3]]), [1, 2, 3])
+        self.assertEqual(fetch._round_robin([]), [])
+
+
+class TestSelectByRatio(unittest.TestCase):
+    def _v(self, vid, ch, genre, score):
+        return {"videoId": vid, "channelId": ch, "genre": genre, "score": score}
+
+    def test_per_channel_cap(self):
+        # 同一チャンネルは最大2件（スコア上位を残す）。
+        vids = [self._v(f"v{i:010d}", "chA", "cm", 90 - i) for i in range(5)]
+        out = fetch.select_by_ratio(vids, max_videos=40, max_per_channel=2)
+        self.assertEqual(len(out), 2)
+        self.assertEqual([v["score"] for v in out], [90, 89])
+
+    def test_genre_ratio_split(self):
+        # cm/mv/other 各8件。max_videos=10, 4:4:2 → cm4/mv4/other2。
+        cms = [self._v(f"c{i:09d}", f"cmch{i}", "cm", 80 - i) for i in range(8)]
+        mvs = [self._v(f"m{i:09d}", f"mvch{i}", "mv", 70 - i) for i in range(8)]
+        others = [self._v(f"o{i:09d}", f"och{i}", "brand", 60 - i) for i in range(8)]
+        out = fetch.select_by_ratio(cms + mvs + others, max_videos=10,
+                                    genre_ratio={"cm": 0.4, "mv": 0.4, "other": 0.2})
+        buckets = {"cm": 0, "mv": 0, "other": 0}
+        for v in out:
+            buckets[fetch._genre_bucket(v["genre"])] += 1
+        self.assertEqual(len(out), 10)
+        self.assertEqual(buckets, {"cm": 4, "mv": 4, "other": 2})
+
+    def test_underfill_redistributes(self):
+        # mv が枠(4)に満たない(2件)場合、残枠は他ジャンルへスコア順で再配分し max_videos を満たす。
+        cms = [self._v(f"c{i:09d}", f"cmch{i}", "cm", 80 - i) for i in range(8)]
+        mvs = [self._v(f"m{i:09d}", f"mvch{i}", "mv", 70 - i) for i in range(2)]
+        out = fetch.select_by_ratio(cms + mvs, max_videos=10,
+                                    genre_ratio={"cm": 0.4, "mv": 0.4, "other": 0.2})
+        self.assertEqual(len(out), 10)  # 2件不足でも他で埋めて10件
+        self.assertEqual(sum(1 for v in out if v["genre"] == "mv"), 2)
+
+    def test_sorted_by_score_desc(self):
+        vids = [self._v("v0000000001", "a", "cm", 50),
+                self._v("v0000000002", "b", "mv", 90),
+                self._v("v0000000003", "c", "brand", 70)]
+        out = fetch.select_by_ratio(vids, max_videos=40)
+        self.assertEqual([v["score"] for v in out], [90, 70, 50])
+
+
 if __name__ == "__main__":
     unittest.main()
