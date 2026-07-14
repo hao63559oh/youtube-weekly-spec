@@ -89,6 +89,20 @@
     });
   }
 
+  // videoId で重複排除（初出のみ残す。横断ビューの二重表示に対する保険）。
+  // all.json 側でも排除するが、キャッシュされた古いデータに備えフロントでも冪等に潰す。
+  function dedupeById(videos) {
+    var seen = {};
+    var out = [];
+    (videos || []).forEach(function (v) {
+      var id = v && v.videoId;
+      if (id && seen[id]) return;
+      if (id) seen[id] = true;
+      out.push(v);
+    });
+    return out;
+  }
+
   // ジャンル/source で絞り込み（空＝全件。値の一致判定）。
   function filterVideos(videos, genres, sources) {
     return videos.filter(function (v) {
@@ -235,12 +249,44 @@
     return { version: 1, updatedAt: nowIso || "", items: buildFeedbackItems(store) };
   }
 
+  // ---- 非表示（好みでないピックを表示から削除）純関数（テスト対象・localStorage/DOM 非依存） ----
+  // hidden ストアは videoId -> { hiddenAt }。公開データ(JSON)は変えず、各自の「表示」だけを消す。
+  function isHidden(store, videoId) {
+    return !!(store && videoId && store[videoId]);
+  }
+
+  // 非表示にする（冪等）。store を返す（破壊的）。
+  function applyHide(store, video, nowIso) {
+    store = store || {};
+    var vid = video && video.videoId;
+    if (vid) store[vid] = { hiddenAt: nowIso || "" };
+    return store;
+  }
+
+  // 非表示を解除する。store を返す（破壊的）。
+  function applyUnhide(store, videoId) {
+    store = store || {};
+    if (videoId && store[videoId]) delete store[videoId];
+    return store;
+  }
+
+  // 非表示 videoId を除外（表示用フィルタ）。
+  function filterHidden(videos, store) {
+    if (!store) return (videos || []).slice();
+    return (videos || []).filter(function (v) { return !isHidden(store, v && v.videoId); });
+  }
+
+  function countHidden(store) {
+    return store ? Object.keys(store).length : 0;
+  }
+
   // ---- DOM 描画（ブラウザ実行時のみ） ------------------------------------
   var currentVideos = [];    // 現在表示中の全動画（フィルタ/並び替え前）。
   var selectedTags = [];     // 選択中タグ key（空＝全件。ジャンル/ソース/評価の統一）。
   var tagUsage = {};         // タグ key -> 使用回数（localStorage 永続。よく使う順バー用）。
   var sortBy = "publishedAt"; // 並び替え（既定: 新着）。
   var feedbackStore = {};    // videoId -> {rating,...}（localStorage 永続。spec 12.3）。
+  var hiddenStore = {};      // videoId -> {hiddenAt}（localStorage 永続。表示から削除したピック）。
   var currentWeek = "";      // 現在表示中の週ラベル（feedback に保存）。
   var allMode = false;       // true=全期間横断ビュー（all.json・週バッジ表示）。
 
@@ -276,11 +322,28 @@
     catch (e) { /* localStorage 不可時は黙ってスキップ */ }
   }
 
+  // ---- 非表示 localStorage ----------------------------------------------
+  var HIDDEN_KEY = "hidden:v1";
+
+  function loadHiddenStore() {
+    try {
+      var raw = window.localStorage.getItem(HIDDEN_KEY);
+      var parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) { return {}; }
+  }
+
+  function saveHiddenStore(store) {
+    try { window.localStorage.setItem(HIDDEN_KEY, JSON.stringify(store)); }
+    catch (e) { /* localStorage 不可時は黙ってスキップ */ }
+  }
+
   // ---- good/bad アイコン（インライン SVG。絵文字不使用。spec 12.2） ----------
   var SVG_NS = "http://www.w3.org/2000/svg";
   var ICON_PATHS = {
     good: "M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z",
-    bad: "M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"
+    bad: "M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z",
+    hide: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
   };
 
   function makeIcon(kind) {
@@ -337,6 +400,56 @@
     if (!el) return;
     var c = countRatings(feedbackStore);
     el.textContent = "good " + c.good + " / bad " + c.bad;
+  }
+
+  // カードの「表示から削除」ボタン（ゴミ箱アイコン・カード左上）。クリックで即非表示にし永続化。
+  function makeHideButton(video) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "hide-btn";
+    btn.title = "この動画を表示から削除（不要=bad として採点にも反映）";
+    btn.setAttribute("aria-label", btn.title);
+    btn.appendChild(makeIcon("hide"));
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();  // 背後のサムネ（再生）に伝播させない。
+      var now = new Date().toISOString();
+      applyHide(hiddenStore, video, now);
+      saveHiddenStore(hiddenStore);
+      // 「好みでない」信号として bad も付与し次週以降の採点に反映（連動）。
+      // 既に bad なら applyRating はトグルで解除してしまうため、bad 以外のときだけ付与する。
+      if (getRating(feedbackStore, video.videoId) !== "bad") {
+        applyRating(feedbackStore, video, "bad", now);
+        saveFeedbackStore(feedbackStore);
+        updateFeedbackSummary();
+      }
+      applyAndRender();     // 非表示分を除いて再描画。
+      renderHiddenBar();
+    });
+    return btn;
+  }
+
+  // 非表示の件数と「すべて表示に戻す」導線（誤操作の復元手段）。0件のときは隠す。
+  function renderHiddenBar() {
+    var bar = document.getElementById("hidden-bar");
+    if (!bar) return;
+    bar.textContent = "";
+    var n = countHidden(hiddenStore);
+    if (n === 0) { bar.setAttribute("hidden", ""); return; }
+    bar.removeAttribute("hidden");
+    var label = document.createElement("span");
+    label.textContent = "非表示 " + n + " 件";
+    bar.appendChild(label);
+    var restore = document.createElement("button");
+    restore.type = "button";
+    restore.className = "restore-btn";
+    restore.textContent = "すべて表示に戻す";
+    restore.addEventListener("click", function () {
+      hiddenStore = {};
+      saveHiddenStore(hiddenStore);
+      applyAndRender();
+      renderHiddenBar();
+    });
+    bar.appendChild(restore);
   }
 
   // エクスポート: feedback.json をダウンロード（spec 12.2/12.4）。CSP は変更しない。
@@ -476,6 +589,9 @@
     // 再生中は CSS の隣接兄弟（.card-media.playing ~ .card-feedback）で非表示。
     card.appendChild(buildFeedbackControls(video));
 
+    // 「表示から削除」ボタン（カード左上）。好みでないピックを一覧から消せる。
+    card.appendChild(makeHideButton(video));
+
     // 下部情報オーバーレイ（テロップ背後に半透明シェイプ）。
     var overlay = document.createElement("div");
     overlay.className = "card-overlay";
@@ -586,8 +702,30 @@
   }
 
   function applyAndRender() {
-    var filtered = filterByTags(currentVideos, selectedTags, ratingAccessor);
+    var visible = filterHidden(currentVideos, hiddenStore);  // 非表示ピックを先に除外。
+    var filtered = filterByTags(visible, selectedTags, ratingAccessor);
     renderGrid(sortVideos(filtered, sortBy));
+  }
+
+  // 初期状態（デフォルト）に戻す: 週セレクタ=「すべて」・絞り込みタグ全解除・並び替え=新着で全件表示。
+  // タイトル「YouTube PickUp」クリックや初回起動の入口として使う。
+  function resetToDefault() {
+    selectedTags = [];
+    sortBy = "publishedAt";
+    var sortSelect = document.getElementById("sort-select");
+    if (sortSelect) sortSelect.value = sortBy;
+    var select = document.getElementById("week-select");
+    if (select) select.value = ALL_VALUE;
+    syncTagActiveStates();
+    // 全タグパネルが開いていれば畳む（初期状態に統一）。
+    var panel = document.getElementById("tag-panel");
+    var toggle = document.getElementById("tag-toggle");
+    if (panel && !panel.hasAttribute("hidden")) {
+      panel.setAttribute("hidden", "");
+      if (toggle) toggle.setAttribute("aria-expanded", "false");
+    }
+    loadAll();
+    if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
   }
 
   // ---- タグ UI（よく使う順バー / 全タグパネル / 🔍トグル） ----------------
@@ -718,7 +856,7 @@
       })
       .then(function (data) {
         currentWeek = "";  // 横断ビューは単一週ではない（各 video.week は all.json 側で付与済み）。
-        currentVideos = data.videos || [];
+        currentVideos = dedupeById(data.videos || []);
         renderTagBar();    // モード切替時によく使う順を反映。
         applyAndRender();
       })
@@ -734,6 +872,22 @@
   function init() {
     var select = document.getElementById("week-select");
     var sortSelect = document.getElementById("sort-select");
+
+    // タイトル「YouTube PickUp」クリックで初期状態（全件・絞り込み解除）に戻す。
+    // キーボード操作でも押せるよう role/tabindex を付与し Enter/Space で発火する。
+    var title = document.getElementById("site-title");
+    if (title) {
+      title.setAttribute("role", "button");
+      title.setAttribute("tabindex", "0");
+      title.setAttribute("title", "トップ（すべての一覧）に戻る");
+      title.addEventListener("click", resetToDefault);
+      title.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          resetToDefault();
+        }
+      });
+    }
     if (sortSelect) {
       sortSelect.value = sortBy;
       sortSelect.addEventListener("change", function () {
@@ -752,6 +906,10 @@
     var exportBtn = document.getElementById("export-btn");
     if (exportBtn) exportBtn.addEventListener("click", exportFeedback);
     updateFeedbackSummary();
+
+    // 非表示: localStorage 復元・復元バー表示。
+    hiddenStore = loadHiddenStore();
+    renderHiddenBar();
 
     // 再生モーダル: ×ボタン / 背景クリック / Escape で閉じる。
     var playerClose = document.getElementById("player-close");
@@ -786,12 +944,13 @@
           opt.textContent = w.week + "（" + (w.count != null ? w.count : 0) + "件）";
           select.appendChild(opt);
         });
-        select.value = weeks[0].week; // 最新週をデフォルト表示。
+        // 既定は全期間横断ビュー（「すべて」）。最初のページは週別ではなく全件一覧を表示する。
+        select.value = ALL_VALUE;
         select.addEventListener("change", function () {
           if (select.value === ALL_VALUE) loadAll();
           else loadWeek(select.value);
         });
-        loadWeek(weeks[0].week);
+        loadAll();
       })
       .catch(function () { setStatus("インデックスの読み込みに失敗しました。"); });
   }
@@ -806,6 +965,7 @@
       embedUrl: embedUrl,
       watchUrl: watchUrl,
       filterVideos: filterVideos,
+      dedupeById: dedupeById,
       sortVideos: sortVideos,
       TAG_DEFS: TAG_DEFS,
       TAG_KEYS: TAG_KEYS,
@@ -819,6 +979,11 @@
       buildFeedbackItems: buildFeedbackItems,
       countRatings: countRatings,
       serializeFeedback: serializeFeedback,
+      isHidden: isHidden,
+      applyHide: applyHide,
+      applyUnhide: applyUnhide,
+      filterHidden: filterHidden,
+      countHidden: countHidden,
     };
   }
 

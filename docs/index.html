@@ -14,7 +14,7 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="header-top">
-        <h1 class="site-title">YouTube PickUp</h1>
+        <h1 class="site-title" id="site-title">YouTube PickUp</h1>
         <p class="updated" id="updated"></p>
       </div>
       <nav class="controls" aria-label="表示切替">
@@ -52,6 +52,8 @@
 
   <main>
     <p class="status" id="status" role="status">読み込み中…</p>
+    <!-- 非表示にしたピックの件数と「すべて表示に戻す」導線（JS で開閉・件数更新）。 -->
+    <p class="hidden-bar" id="hidden-bar" role="status" aria-live="polite" hidden></p>
     <section class="grid" id="grid" aria-label="映像グリッド"></section>
   </main>
 

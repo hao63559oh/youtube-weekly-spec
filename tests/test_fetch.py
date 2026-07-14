@@ -360,6 +360,115 @@ class TestRebuildAll(unittest.TestCase):
             self.assertEqual(allj["count"], 0)
             self.assertEqual(allj["videos"], [])
 
+    def test_dedupes_same_video_across_weeks_keeping_newest(self):
+        # 同一 videoId が複数週に出た場合は 1 件に排除し、最新週の版（週バッジ）を残す。
+        with tempfile.TemporaryDirectory() as d:
+            data = Path(d)
+            a, b = fetch.parse_dt("2026-06-12T08:00:00Z"), fetch.parse_dt("2026-06-19T08:00:00Z")
+            c, d2 = fetch.parse_dt("2026-06-19T08:00:00Z"), fetch.parse_dt("2026-06-26T08:00:00Z")
+            # dup0001 は両週に、W26 には固有の new0001 も。
+            p25 = fetch.build_week_payload("2026-W25", a, b, [self._mk_video("dupxxxx0001")])
+            p26 = fetch.build_week_payload("2026-W26", c, d2,
+                                           [self._mk_video("dupxxxx0001"), self._mk_video("newxxxx0001")])
+            for p in (p25, p26):
+                fetch.write_week_json(data, p)
+                fetch.update_index_json(data, p, p["generatedAt"])
+            fetch.rebuild_all_json(data, "2026-06-26T08:00:00Z")
+            allj = json.loads((data / "all.json").read_text(encoding="utf-8"))
+            self.assertEqual(allj["count"], 2)  # 3 件中 1 件が重複排除。
+            ids = [v["videoId"] for v in allj["videos"]]
+            self.assertEqual(ids, ["dupxxxx0001", "newxxxx0001"])  # 新しい週順・ユニーク。
+            # 残った dup は最新週 W26 の版。
+            dup = next(v for v in allj["videos"] if v["videoId"] == "dupxxxx0001")
+            self.assertEqual(dup["week"], "2026-W26")
+
+
+class TestRecentExclude(unittest.TestCase):
+    """recent_exclude: 過去週参照で同一動画/同一 discovery チャンネルの再選出を防ぐ。"""
+
+    NOW = "2026-07-08T00:00:00Z"  # iso_week = 2026-W28
+
+    def _vid(self, vid, channel_id, source):
+        return fetch.build_video_object(
+            {"id": vid,
+             "snippet": {"title": "t", "channelId": channel_id, "channelTitle": "c",
+                         "publishedAt": "2026-06-18T10:00:00Z"},
+             "statistics": {"viewCount": "1"}, "contentDetails": {"duration": "PT3M"},
+             "status": {"embeddable": True}},
+            source, None)
+
+    def _seed(self, data, week, generated_at, videos):
+        a = fetch.parse_dt("2026-06-01T00:00:00Z")
+        p = fetch.build_week_payload(week, a, fetch.parse_dt(generated_at), videos)
+        fetch.write_week_json(data, p)
+        fetch.update_index_json(data, p, p["generatedAt"])
+        return p
+
+    def test_video_permanent_channel_windowed(self):
+        # 37日前の週: 動画は video_days(3650)内で除外対象、チャンネルは channel_days(30)外で対象外。
+        with tempfile.TemporaryDirectory() as d:
+            data = Path(d)
+            self._seed(data, "2026-W23", "2026-06-01T00:00:00Z",
+                       [self._vid("oldvid00001", "UColdxxxxxxxxxxxxxxxxxx", "discovery")])
+            vids, chs = fetch.load_recent_picks(
+                data / "weeks", fetch.parse_dt(self.NOW),
+                video_days=3650, channel_days=30, exclude_week="2026-W28")
+            self.assertIn("oldvid00001", vids)
+            self.assertNotIn("UColdxxxxxxxxxxxxxxxxxx", chs)
+
+    def test_channel_within_window(self):
+        # 7日前の週の discovery チャンネルは channel_days(30)内で除外対象。
+        with tempfile.TemporaryDirectory() as d:
+            data = Path(d)
+            self._seed(data, "2026-W27", "2026-07-01T00:00:00Z",
+                       [self._vid("recvid00001", "UCrecentxxxxxxxxxxxxxx", "discovery")])
+            vids, chs = fetch.load_recent_picks(
+                data / "weeks", fetch.parse_dt(self.NOW),
+                video_days=3650, channel_days=30, exclude_week="2026-W28")
+            self.assertIn("recvid00001", vids)
+            self.assertIn("UCrecentxxxxxxxxxxxxxx", chs)
+
+    def test_allowlist_channel_not_in_channel_set(self):
+        # allowlist 由来は動画IDは除外対象だが、チャンネル除外の対象にはしない。
+        with tempfile.TemporaryDirectory() as d:
+            data = Path(d)
+            self._seed(data, "2026-W27", "2026-07-01T00:00:00Z",
+                       [self._vid("allvid00001", "UCallowxxxxxxxxxxxxxxx", "allowlist")])
+            vids, chs = fetch.load_recent_picks(
+                data / "weeks", fetch.parse_dt(self.NOW),
+                video_days=3650, channel_days=30, exclude_week="2026-W28")
+            self.assertIn("allvid00001", vids)
+            self.assertNotIn("UCallowxxxxxxxxxxxxxxx", chs)
+
+    def test_exclude_week_skipped(self):
+        # 今回の週ラベルと同じ週は自己除外を避けるためスキップ（同週再実行の冪等性）。
+        with tempfile.TemporaryDirectory() as d:
+            data = Path(d)
+            self._seed(data, "2026-W28", "2026-07-06T00:00:00Z",
+                       [self._vid("selfvid0001", "UCselfxxxxxxxxxxxxxxxx", "discovery")])
+            vids, chs = fetch.load_recent_picks(
+                data / "weeks", fetch.parse_dt(self.NOW),
+                video_days=3650, channel_days=30, exclude_week="2026-W28")
+            self.assertEqual(vids, set())
+            self.assertEqual(chs, set())
+
+    def test_collect_discovery_excludes_recent_video(self):
+        # 前段で recent_video_ids に一致する候補は videos.list/採点前に除外される。
+        client = fetch.FixtureClient(FIXTURES)
+        score_client = fetch.FixtureScoreClient(FIXTURES)
+        after = fetch.parse_dt("2026-06-12T08:00:00Z")
+        before = fetch.parse_dt("2026-06-19T08:00:00Z")
+        cfg = TestDiscovery()._config()
+        base = fetch.collect_discovery_videos(
+            client, cfg, [{"channelId": "UCaaaaaaaaaaaaaaaaaaaaaa"}],
+            after, before, score_client=score_client)
+        self.assertEqual([v["videoId"] for v in base], ["discov00001"])
+        excluded = fetch.collect_discovery_videos(
+            client, cfg, [{"channelId": "UCaaaaaaaaaaaaaaaaaaaaaa"}],
+            after, before, score_client=score_client,
+            recent_video_ids={"discov00001"})
+        self.assertEqual(excluded, [])
+
 
 class TestMainErrors(unittest.TestCase):
     def test_missing_allowlist_returns_1(self):

@@ -21,6 +21,11 @@
     "max_candidates": 80,
     "max_per_channel": 2,
     "genre_ratio": { "cm": 0.4, "mv": 0.4, "other": 0.2 },
+    "recent_exclude": {
+      "enabled": true,
+      "video_days": 3650,
+      "channel_days": 30
+    },
     "llm": {
       "enabled": true,
       "model": "claude-haiku-4-5",
