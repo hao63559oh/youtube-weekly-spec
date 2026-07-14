@@ -351,11 +351,13 @@ def collect_allowlist_videos(client, channels: list, config: dict, after: dateti
 
 
 def collect_discovery_videos(client, config: dict, channels: list, after: datetime,
-                             before: datetime, score_client=None, feedback=None) -> list:
+                             before: datetime, score_client=None, feedback=None,
+                             recent_video_ids=None, recent_channel_ids=None) -> list:
     """discovery 系統（spec 3.4）：search → 前段フィルタ → videos.list → 後段フィルタ → LLM採点 → 閾値。
 
     フロー順序厳守：categoryId/尺は videos.list 後でしか判定できないため後段で判定する。
     YouTube API エラーは送出（週生成を中止）。LLM採点失敗(ScoreError)は discovery を空にして継続（3.10）。
+    recent_video_ids / recent_channel_ids（再選出防止）は前段で除外し、無駄な videos.list/採点を省く。
     """
     disc = config.get("discovery") or {}
     if not disc.get("enabled", True):
@@ -388,6 +390,9 @@ def collect_discovery_videos(client, config: dict, channels: list, after: dateti
     # 1+2: search（part=snippet）→ 前段フィルタ（videoId 重複排除・allowlist チャンネル除外）。
     # キーワードごとに ID を集め、最後にラウンドロビンで均等統合する（後方キーワード＝MV等が
     # max_candidates 上限で切られてジャンルが偏るのを防ぐ。3.4）。
+    recent_vids = recent_video_ids or set()
+    recent_chs = recent_channel_ids or set()
+    excluded_recent = 0
     per_kw_ids: list = []
     seen: set = set()
     for kw in keywords:
@@ -402,6 +407,11 @@ def collect_discovery_videos(client, config: dict, channels: list, after: dateti
                     continue
                 if channel_id in allow_channel_ids:
                     continue  # allowlist 分は収集済み。
+                # 再選出防止: 直近ピック済み動画／discovery チャンネルは前段で除外（コスト節約）。
+                if vid in recent_vids or channel_id in recent_chs:
+                    seen.add(vid)  # 他キーワードでの再評価も防ぐ。
+                    excluded_recent += 1
+                    continue
                 seen.add(vid)
                 ids_for_kw.append(vid)
             page_token = page.get("nextPageToken")
@@ -409,6 +419,9 @@ def collect_discovery_videos(client, config: dict, channels: list, after: dateti
                 break
         per_kw_ids.append(ids_for_kw)
     candidate_ids = _round_robin(per_kw_ids)
+    if excluded_recent:
+        logger.info("discovery 前段: 再選出防止で %d 件除外（動画%d/チャンネル%d 参照）",
+                    excluded_recent, len(recent_vids), len(recent_chs))
     logger.info("discovery 前段: 候補 videoId=%d（%dキーワードを均等統合）",
                 len(candidate_ids), len(per_kw_ids))
     if not candidate_ids:
@@ -578,6 +591,10 @@ def rebuild_all_json(data_dir: Path, updated_at: Optional[str] = None) -> Path:
             (w.get("week") for w in index.get("weeks", []) if w.get("week")),
             reverse=True,
         )
+        # 週をまたいだ同一動画の重複排除（横断ビューの二重表示防止）。
+        # 週降順で走査し videoId 初出のみ採用＝最新週の版を残す（週バッジも最新週になる）。
+        seen_ids: set = set()
+        dup_count = 0
         for wk in week_labels:
             wp = weeks_dir / f"{wk}.json"
             if not wp.exists():
@@ -587,9 +604,18 @@ def rebuild_all_json(data_dir: Path, updated_at: Optional[str] = None) -> Path:
                 week_payload = json.load(f)
             label = week_payload.get("week", wk)
             for v in week_payload.get("videos", []):
+                vid = v.get("videoId")
+                if vid and vid in seen_ids:
+                    dup_count += 1
+                    continue   # 既出動画（前の＝より新しい週で採用済み）はスキップ。
+                if vid:
+                    seen_ids.add(vid)
                 merged = dict(v)
                 merged["week"] = label   # 横断表示で各カードに週バッジを出すため付与。
                 videos.append(merged)
+        if dup_count:
+            logger.info("all.json 再構築: 週跨ぎ重複を %d 件除外（ユニーク %d 件）",
+                        dup_count, len(videos))
     payload = {
         "updatedAt": index_updated or "",
         "count": len(videos),
@@ -768,20 +794,85 @@ class FixtureScoreClient:
 # --------------------------------------------------------------------------
 # オーケストレーション
 # --------------------------------------------------------------------------
+def load_recent_picks(weeks_dir: Path, now: datetime, video_days: int,
+                      channel_days: int, exclude_week: Optional[str] = None):
+    """過去週JSON から「最近ピックアップ済み」の videoId / discovery チャンネルID を集める（再選出防止）。
+
+    - video_days 以内の週の全 videoId を集める（同一動画の再掲防止。allowlist/discovery 問わず）。
+    - channel_days 以内の週の **discovery 由来** チャンネルID を集める（同一チャンネルの短期連投防止。
+      allowlist チャンネルは discovery 候補から元々除外されるため対象外）。
+    - exclude_week（＝今回の週ラベル）は自己除外を避けるためスキップ（同週再実行の冪等性を守る）。
+    戻り値: (recent_video_ids: set, recent_channel_ids: set)
+    """
+    recent_video_ids: set = set()
+    recent_channel_ids: set = set()
+    if not weeks_dir.exists():
+        return recent_video_ids, recent_channel_ids
+    max_days = max(video_days, channel_days)
+    for wp in sorted(weeks_dir.glob("*.json")):
+        try:
+            with wp.open(encoding="utf-8") as f:
+                payload = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning("recent_exclude: 週JSON を読めません（スキップ）: %s (%s)", wp.name, e)
+            continue
+        label = payload.get("week", wp.stem)
+        if exclude_week is not None and label == exclude_week:
+            continue
+        gen = payload.get("generatedAt") or (payload.get("period") or {}).get("to")
+        try:
+            gen_dt = parse_dt(gen) if gen else None
+        except (ValueError, TypeError):
+            gen_dt = None
+        if gen_dt is None:
+            continue
+        age = now - gen_dt
+        if age > timedelta(days=max_days):
+            continue  # video/channel いずれの窓にも入らない古い週。
+        within_video = age <= timedelta(days=video_days)
+        within_channel = age <= timedelta(days=channel_days)
+        for v in payload.get("videos", []):
+            vid = v.get("videoId")
+            if within_video and vid:
+                recent_video_ids.add(vid)
+            if within_channel and v.get("source") == "discovery":
+                ch = v.get("channelId")
+                if ch:
+                    recent_channel_ids.add(ch)
+    return recent_video_ids, recent_channel_ids
+
+
 def run(config: dict, allowlist: dict, client, now: datetime, score_client=None,
-        feedback=None) -> Optional[dict]:
+        feedback=None, data_dir: Optional[Path] = None) -> Optional[dict]:
     """allowlist + discovery を収集し週 payload を返す。0件なら None。"""
     lookback_days = config.get("lookback_days", 7)
     after = now - timedelta(days=lookback_days)
     before = now
     channels = allowlist.get("channels", [])
+    disc = config.get("discovery") or {}
+
+    # 再選出防止（過去週参照）: 同一動画は video_days、discovery チャンネルは channel_days 除外。
+    # data_dir 未指定（直接呼び出し等）や無効化時は除外なしで従来動作。
+    rex = disc.get("recent_exclude") or {}
+    recent_video_ids: set = set()
+    recent_channel_ids: set = set()
+    if rex.get("enabled", True) and data_dir is not None:
+        recent_video_ids, recent_channel_ids = load_recent_picks(
+            Path(data_dir) / "weeks", now,
+            rex.get("video_days", 3650), rex.get("channel_days", 30),
+            exclude_week=iso_week_label(now),
+        )
+        if recent_video_ids or recent_channel_ids:
+            logger.info("recent_exclude: 直近ピック 動画=%d / discoveryチャンネル=%d を除外対象に",
+                        len(recent_video_ids), len(recent_channel_ids))
 
     allowlist_videos = collect_allowlist_videos(client, channels, config, after, before)
-    discovery_videos = collect_discovery_videos(client, config, channels, after, before,
-                                                score_client=score_client, feedback=feedback)
+    discovery_videos = collect_discovery_videos(
+        client, config, channels, after, before,
+        score_client=score_client, feedback=feedback,
+        recent_video_ids=recent_video_ids, recent_channel_ids=recent_channel_ids)
 
     max_videos = config.get("max_videos", 40)
-    disc = config.get("discovery") or {}
     # discovery は「同一チャンネル上限＋ジャンル比率(CM/MV/その他)」で選定する（3.9）。
     # allowlist は作者が明示登録した curated なのでそのまま統合する。
     selected_discovery = select_by_ratio(
@@ -911,7 +1002,8 @@ def main(argv: Optional[list] = None) -> int:
     feedback = load_feedback(feedback_path)
 
     try:
-        payload = run(config, allowlist, client, now, score_client=score_client, feedback=feedback)
+        payload = run(config, allowlist, client, now, score_client=score_client,
+                      feedback=feedback, data_dir=data_dir)
     except RuntimeError as e:
         # YouTube API エラー等: 既存JSONを壊さず非ゼロ終了（3.10）。
         logger.error("収集に失敗しました: %s", e)

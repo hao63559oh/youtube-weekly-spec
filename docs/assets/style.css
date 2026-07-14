@@ -65,6 +65,15 @@ body {
   color: var(--text);
   border-left: 4px solid var(--accent);
   padding-left: 0.6rem;
+  cursor: pointer;               /* クリックで初期状態（すべての一覧）へ戻る */
+  user-select: none;
+}
+
+.site-title:hover { color: #fff; }
+.site-title:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 .updated {
@@ -170,50 +179,36 @@ select {
   border: 0;
 }
 
-/* ===== レイアウト: 参考カタログに合わせ「1カラム・横長ボードを左右にずらして重ねる」 ===== */
+/* ===== レイアウト: 利便性優先のタイル整列（列数は画面幅で自動調整） ===== */
+/* auto-fill + minmax で、PC=3列 / タブレット=2列 / スマホ=1列に自然に折り返す。
+   min(300px,100%) は超狭端末での横はみ出し防止。 */
 .grid {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 2rem 1.4rem 4.5rem;
-  display: block;
+  padding: 1.6rem 1.4rem 4.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 1.1rem;
+  align-items: start;
 }
 
-/* カード = 全面サムネの横長ボード。情報は左上、操作系は右下（ビジュアルを主役に）。 */
+/* カード = 全面サムネの 16:9 タイル。情報は左上、操作系は右下（ビジュアルを主役に）。 */
 .card {
   position: relative;
-  width: 72%;
-  aspect-ratio: 2 / 1;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   border-radius: var(--radius);
   overflow: hidden;
   background: #000;
   border: 1px solid var(--border);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-
-/* 左右にジグザグ配置（参考の重なり構図） */
-.card:nth-child(odd) { margin-right: auto; margin-left: 0; }
-.card:nth-child(even) { margin-left: auto; margin-right: 0; }
-
-/* 次のカードを前のカードに少しだけ重ねて奥行きを出す */
-.card + .card { margin-top: -2.5%; }
 
 .card:hover {
   transform: translateY(-4px) scale(1.01);
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.7);
   z-index: 5;
-}
-
-/* 狭い画面では重なり・ずらしを解除して全幅で縦積み */
-@media (max-width: 720px) {
-  .card,
-  .card:nth-child(odd),
-  .card:nth-child(even) {
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-  }
-  .card + .card { margin-top: 1.4rem; }
 }
 
 .card-media {
@@ -286,6 +281,10 @@ select {
     rgba(30, 8, 11, 0) 100%);
   border-bottom-right-radius: 16px;
 }
+
+/* サムネイル上のタイトル/タグ（バッジ）等の情報オーバーレイは非表示にし、ビジュアルを主役にする。
+   タイトルは画像 alt・再生モーダルには残る。操作系(good/bad・YouTubeで開く)はカード隅に維持。 */
+.card-overlay { display: none; }
 
 .card-title {
   font-family: Georgia, "Times New Roman", "Hiragino Mincho ProN", "Yu Mincho", serif;
@@ -425,10 +424,68 @@ select {
 .fb-good.active { color: #fff; background: #2e7d52; border-color: #2e7d52; }
 .fb-bad.active { color: #fff; background: var(--accent); border-color: var(--accent); }
 
+/* 「表示から削除」ボタン（カード左上・ホバー/フォーカスで表示）。good/bad と同じ見た目に統一。 */
+.hide-btn {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.card:hover .hide-btn,
+.card:focus-within .hide-btn { opacity: 1; }
+
+/* タッチ端末はホバーがないので常時表示 */
+@media (hover: none) {
+  .hide-btn { opacity: 1; }
+}
+
+.hide-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0, 0, 0, 0.72); }
+
 /* 再生中はオーバーレイ類を隠してビジュアルに集中（media は先頭要素） */
 .card-media.playing ~ .card-overlay,
 .card-media.playing ~ .card-feedback,
-.card-media.playing ~ .card-actions { display: none; }
+.card-media.playing ~ .card-actions,
+.card-media.playing ~ .hide-btn { display: none; }
+
+/* ===== 非表示バー（件数＋すべて表示に戻す） ===== */
+.hidden-bar {
+  max-width: var(--maxw);
+  margin: 0.4rem auto 0;
+  padding: 0 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.hidden-bar[hidden] { display: none; }
+
+.restore-btn {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.24rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.restore-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ===== 再生モーダル（全画面プレイヤー） ===== */
 .player-modal {

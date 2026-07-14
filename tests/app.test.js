@@ -87,6 +87,54 @@ test("filterVideos: ジャンル AND source", () => {
   assert.deepStrictEqual(ids, ["a"]);
 });
 
+test("dedupeById: 同一 videoId は初出のみ残す（順序保持）", () => {
+  const dupes = [
+    { videoId: "x", week: "W28" },
+    { videoId: "y", week: "W28" },
+    { videoId: "x", week: "W27" },
+    { videoId: "z", week: "W27" },
+  ];
+  const out = app.dedupeById(dupes);
+  assert.deepStrictEqual(out.map((v) => v.videoId), ["x", "y", "z"]);
+  // 初出（先頭 = より新しい週）の版を残す。
+  assert.strictEqual(out.find((v) => v.videoId === "x").week, "W28");
+});
+
+test("dedupeById: videoId 欠落は残す・空入力は空", () => {
+  assert.deepStrictEqual(app.dedupeById([]), []);
+  const noId = [{ title: "a" }, { title: "b" }];
+  assert.strictEqual(app.dedupeById(noId).length, 2);
+});
+
+test("applyHide / isHidden: 非表示の登録と判定（冪等）", () => {
+  const store = {};
+  app.applyHide(store, { videoId: "a" }, "2026-07-14T00:00:00Z");
+  assert.strictEqual(app.isHidden(store, "a"), true);
+  assert.strictEqual(app.isHidden(store, "b"), false);
+  app.applyHide(store, { videoId: "a" }, "2026-07-14T00:00:00Z"); // 再押下でも1件のまま。
+  assert.strictEqual(app.countHidden(store), 1);
+  // videoId 欠落は無視。
+  app.applyHide(store, {}, "");
+  assert.strictEqual(app.countHidden(store), 1);
+});
+
+test("applyUnhide: 非表示解除", () => {
+  const store = {};
+  app.applyHide(store, { videoId: "a" }, "");
+  app.applyUnhide(store, "a");
+  assert.strictEqual(app.isHidden(store, "a"), false);
+  assert.strictEqual(app.countHidden(store), 0);
+});
+
+test("filterHidden: 非表示 videoId を除外（空ストアは全件）", () => {
+  const ids = (arr) => arr.map((v) => v.videoId);
+  const store = {};
+  app.applyHide(store, { videoId: "b" }, "");
+  assert.deepStrictEqual(ids(app.filterHidden(SAMPLE, store)), ["a", "c", "d"]);
+  assert.deepStrictEqual(ids(app.filterHidden(SAMPLE, {})), ["a", "b", "c", "d"]);
+  assert.deepStrictEqual(ids(app.filterHidden(SAMPLE, null)), ["a", "b", "c", "d"]);
+});
+
 test("sortVideos: 新着（publishedAt 降順）", () => {
   const ids = app.sortVideos(SAMPLE, "publishedAt").map((v) => v.videoId);
   assert.deepStrictEqual(ids, ["c", "b", "d", "a"]);
