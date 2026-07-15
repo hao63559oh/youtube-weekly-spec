@@ -234,36 +234,6 @@ select {
   object-fit: cover;
 }
 
-/* 再生アイコン（YouTube 赤のオーバーレイ） */
-.play-badge {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.play-badge::before {
-  content: "";
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: rgba(255, 49, 39, 0.9);
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
-}
-
-.play-badge::after {
-  content: "";
-  position: absolute;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 10px 0 10px 17px;
-  border-color: transparent transparent transparent #fff;
-  transform: translateX(2px);
-}
-
 /* 左上の情報ブロック（参考レイアウトのタイトル位置・背後に半透明シェイプ） */
 .card-overlay {
   position: absolute;
@@ -282,9 +252,27 @@ select {
   border-bottom-right-radius: 16px;
 }
 
-/* サムネイル上のタイトル/タグ（バッジ）等の情報オーバーレイは非表示にし、ビジュアルを主役にする。
-   タイトルは画像 alt・再生モーダルには残る。操作系(good/bad・YouTubeで開く)はカード隅に維持。 */
-.card-overlay { display: none; }
+/* サムネにマウスを乗せた時のみ、タイトルとチャンネル名を表示（ビジュアルを主役に保ちつつ情報を補助）。
+   メタ情報（尺・再生数・バッジ）は出さず 2 項目に絞る。再生中は下部の playing ルールで非表示。 */
+.card-overlay {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.card:hover .card-overlay,
+.card:focus-within .card-overlay { opacity: 1; }
+
+/* タッチ端末はホバーがないので常時表示 */
+@media (hover: none) {
+  .card-overlay { opacity: 1; }
+}
+
+/* ホバー表示はタイトルとチャンネル名のみ（メタ情報は隠す）。 */
+.card-overlay .card-meta { display: none; }
+
+/* ホバー表示中もサムネのクリック(=再生)を妨げないよう、テキストもクリックスルーにする。 */
+.card-overlay .card-title,
+.card-overlay .card-channel { pointer-events: none; }
 
 .card-title {
   font-family: Georgia, "Times New Roman", "Hiragino Mincho ProN", "Yu Mincho", serif;

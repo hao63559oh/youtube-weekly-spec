@@ -476,7 +476,7 @@
   }
 
   function buildThumb(button) {
-    // dataset から img + 再生バッジを組み立てる。
+    // dataset から img を組み立てる。
     // 高解像度サムネ(maxresdefault 1280x720)を優先し、無い動画は hqdefault にフォールバック
     // （横長カードで拡大されても荒れないように。CSP img-src は i.ytimg.com のまま）。
     button.textContent = "";
@@ -495,9 +495,6 @@
     img.alt = button.dataset.title || "";
     img.loading = "lazy";
     button.appendChild(img);
-    var badge = document.createElement("span");
-    badge.className = "play-badge";
-    button.appendChild(badge);
     button.classList.remove("playing");
   }
 
@@ -641,25 +638,26 @@
       link.textContent = "YouTubeで開く";
       actions.appendChild(link);
     }
-    // allowlist 昇格支援: channelId コピー（4.3）。
-    if (video.channelId) {
+    // 再生ページ(watch)URL をコピー（共有・保存用）。videoId 検証済みのときのみ。
+    if (validId) {
+      var shareUrl = watchUrl(video.videoId);
       var copyBtn = document.createElement("button");
       copyBtn.className = "copy-btn";
       copyBtn.type = "button";
-      copyBtn.textContent = "チャンネルIDをコピー";
+      copyBtn.textContent = "リンクをコピー";
       copyBtn.addEventListener("click", function () {
-        copyText(video.channelId).then(function () {
+        copyText(shareUrl).then(function () {
           copyBtn.textContent = "コピーしました";
-          setTimeout(function () { copyBtn.textContent = "チャンネルIDをコピー"; }, 1500);
+          setTimeout(function () { copyBtn.textContent = "リンクをコピー"; }, 1500);
         }).catch(function () {
           copyBtn.textContent = "コピー失敗";
-          setTimeout(function () { copyBtn.textContent = "チャンネルIDをコピー"; }, 1500);
+          setTimeout(function () { copyBtn.textContent = "リンクをコピー"; }, 1500);
         });
       });
       actions.appendChild(copyBtn);
     }
     card.appendChild(overlay);
-    // 操作系（YouTubeで開く / channelId コピー）はカード右下にホバー表示。
+    // 操作系（YouTubeで開く / リンクコピー）はカード右下にホバー表示。
     card.appendChild(actions);
     return card;
   }
