@@ -3,8 +3,16 @@ name: weekly
 # トリガーは schedule と workflow_dispatch のみ（pull_request / pull_request_target は使わない。10.3）。
 on:
   schedule:
-    - cron: '0 0 * * 1'   # 毎週月曜 00:00 UTC = 09:00 JST
+    # 毎週土曜 15:00 UTC = 日曜 00:00 JST。
+    # ISO週は月〜日なので、土曜(UTC)と日曜(JST)は同一週に収まりラベルがズレない。
+    # 00:00 UTC は cron が最も集中して遅延しやすいため、この枠を避ける意図もある。
+    - cron: '0 15 * * 6'
   workflow_dispatch:
+    inputs:
+      now:
+        description: '基準時刻 ISO8601（空なら現在時刻。例: 2026-07-18T15:00:00Z）'
+        required: false
+        type: string
 
 # 付与は contents: write のみ（10.3）。
 permissions:
@@ -41,7 +49,15 @@ jobs:
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python scripts/fetch.py
+          # inputs.now は run 内に直接展開せず env 経由で渡す（シェルへの注入を避ける）。
+          # schedule 実行時は空文字になり、fetch.py 側の既定（現在UTC）が使われる。
+          NOW: ${{ inputs.now }}
+        run: |
+          if [ -n "$NOW" ]; then
+            python scripts/fetch.py --now "$NOW"
+          else
+            python scripts/fetch.py
+          fi
 
       # 自動コミットは対象を明示（想定外ファイルを巻き込まない。10.3）。差分が無ければスキップ。
       - name: Commit & push docs/data
