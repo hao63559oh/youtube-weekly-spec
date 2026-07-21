@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import tempfile
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional
@@ -257,17 +258,76 @@ def _genre_bucket(genre) -> str:
     return genre if genre in ("cm", "mv") else "other"
 
 
-def select_by_ratio(videos: list, max_videos: int, max_per_channel: int = 2,
+# 尺表記トークン（「30秒」「15s」「60sec」など）。数字＋単位をまとめて除去する。
+_DURATION_TOKEN_RE = re.compile(r"\d+\s*(?:秒|s|sec|secs|second|seconds)(?![a-z0-9])",
+                                re.IGNORECASE)
+# 尺表記を除去した結果できる空カッコ（【】()［］ など）。
+_EMPTY_BRACKET_RE = re.compile(r"[(（\[［{｛【〈《「『]\s*[)）\]］}｝】〉》」』]")
+# 比較用に落とす記号・空白（全角/半角の区切り文字）。
+_SEPARATOR_RE = re.compile(r"[\s　!-/:-@\[-`{-~、。，．・…‐―–—「」『』【】〈〉《》（）]+")
+
+
+def normalize_title_for_dedupe(title: str) -> str:
+    """類似タイトル判定用の正規化キーを作る。
+
+    「〇〇 CM 30秒」と「〇〇 CM 15秒」を同一視するため、NFKC 正規化・小文字化のうえで
+    尺表記トークン→空カッコ→区切り記号の順に除去する。「30秒版」「15s ver」は
+    数字＋単位だけが落ちて「版」「ver」が残るため、両者は同じキーに揃う。
+    """
+    key = unicodedata.normalize("NFKC", title or "").lower()
+    key = _DURATION_TOKEN_RE.sub("", key)
+    key = _EMPTY_BRACKET_RE.sub("", key)
+    key = _SEPARATOR_RE.sub("", key)
+    return key
+
+
+def dedupe_similar_titles(videos: list) -> list:
+    """同一チャンネル内で「尺表記だけが異なる同名タイトル」を1件に集約する。
+
+    残すのは尺の長い方（durationSeconds 最大）。同尺ならスコア上位、それも同じなら
+    videoId 昇順で決定的に選ぶ。正規化キーが空になるタイトルは集約せず全件残す。
+    入力順は保持する（呼び出し側の並び順を壊さない）。
+    """
+    best: dict = {}
+    for v in videos:
+        key = normalize_title_for_dedupe(v.get("title", ""))
+        if not key:
+            continue
+        group = (v.get("channelId") or "", key)
+        cur = best.get(group)
+        rank = (v.get("durationSeconds") or -1, v.get("score") or -1)
+        if cur is None or rank > cur[0] or (rank == cur[0] and v.get("videoId", "") < cur[1]):
+            best[group] = (rank, v.get("videoId", ""))
+
+    out: list = []
+    for v in videos:
+        key = normalize_title_for_dedupe(v.get("title", ""))
+        if not key:
+            out.append(v)
+            continue
+        group = (v.get("channelId") or "", key)
+        if best[group][1] == v.get("videoId", ""):
+            out.append(v)
+    return out
+
+
+def select_by_ratio(videos: list, max_videos: int, max_per_channel: int = 1,
                     genre_ratio: Optional[dict] = None) -> list:
     """スコア降順で、同一チャンネル上限とジャンル比率(cm/mv/other)を満たすよう最終選定する（3.9）。
 
-    - まず同一 channelId は max_per_channel 件までに制限（スコア上位を残す）。
-    - 次に genre_ratio（例 cm:0.4/mv:0.4/other:0.2）で各バケットの枠を割り当て、
+    - まず尺表記だけが異なる同名タイトル（15秒版/30秒版など）を長い方に集約する。
+      チャンネル上限より先に行うのが要点で、逆順だとスコア上位の短尺版が枠を取り
+      長尺版が落ちてしまう。
+    - 次に同一 channelId は max_per_channel 件までに制限（スコア上位を残す）。
+    - 最後に genre_ratio（例 cm:0.4/mv:0.4/other:0.2）で各バケットの枠を割り当て、
       バケット内スコア上位から埋める。埋まらない枠は残りをスコア順で再配分する（比率は「程度」）。
     - 返り値はスコア降順・最大 max_videos 件。
     """
     ratio = genre_ratio or {"cm": 0.4, "mv": 0.4, "other": 0.2}
     ranked = sorted(videos, key=lambda v: -(v.get("score") or 0))
+
+    # 0) 尺違いの同名タイトルを長い方に集約
+    ranked = dedupe_similar_titles(ranked)
 
     # 1) 同一チャンネル上限
     per_ch: dict = {}
@@ -877,7 +937,7 @@ def run(config: dict, allowlist: dict, client, now: datetime, score_client=None,
     # allowlist は作者が明示登録した curated なのでそのまま統合する。
     selected_discovery = select_by_ratio(
         discovery_videos, max_videos,
-        max_per_channel=disc.get("max_per_channel", 2),
+        max_per_channel=disc.get("max_per_channel", 1),
         genre_ratio=disc.get("genre_ratio"),
     )
     merged = merge_and_dedupe(allowlist_videos, selected_discovery)

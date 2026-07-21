@@ -569,9 +569,77 @@ class TestRoundRobin(unittest.TestCase):
         self.assertEqual(fetch._round_robin([]), [])
 
 
+class TestNormalizeTitleForDedupe(unittest.TestCase):
+    def test_duration_tokens_collapse(self):
+        # 尺表記だけが違うタイトルは同一キーになる。
+        keys = [fetch.normalize_title_for_dedupe(t) for t in [
+            "ブランドA 新CM 30秒",
+            "ブランドA 新CM 15秒",
+            "ブランドA 新CM【60秒】",
+            "ブランドA 新CM 30s",
+            "ブランドA　新CM（15sec）",
+        ]]
+        self.assertEqual(len(set(keys)), 1, keys)
+
+    def test_version_suffix_collapse(self):
+        # 「30秒版」「15s ver」も数字＋単位だけ落ちて揃う。
+        self.assertEqual(fetch.normalize_title_for_dedupe("商品X CM 30秒版"),
+                         fetch.normalize_title_for_dedupe("商品X CM 15秒版"))
+
+    def test_different_titles_stay_distinct(self):
+        self.assertNotEqual(fetch.normalize_title_for_dedupe("ブランドA 新CM 30秒"),
+                            fetch.normalize_title_for_dedupe("ブランドB 新CM 30秒"))
+
+    def test_non_duration_numbers_kept(self):
+        # 尺以外の数字は残す（別作品を潰さない）。
+        self.assertNotEqual(fetch.normalize_title_for_dedupe("シリーズ 第1話"),
+                            fetch.normalize_title_for_dedupe("シリーズ 第2話"))
+
+    def test_empty_title(self):
+        self.assertEqual(fetch.normalize_title_for_dedupe(""), "")
+
+
+class TestDedupeSimilarTitles(unittest.TestCase):
+    def _v(self, vid, ch, title, dur, score=50):
+        return {"videoId": vid, "channelId": ch, "title": title,
+                "durationSeconds": dur, "score": score}
+
+    def test_keeps_longest(self):
+        vids = [self._v("v0000000001", "chA", "ブランドA CM 15秒", 15, score=90),
+                self._v("v0000000002", "chA", "ブランドA CM 30秒", 30, score=60)]
+        out = fetch.dedupe_similar_titles(vids)
+        self.assertEqual([v["videoId"] for v in out], ["v0000000002"])
+
+    def test_different_channels_not_merged(self):
+        # チャンネルが違えば別扱い（汎用タイトルの誤集約を避ける）。
+        vids = [self._v("v0000000001", "chA", "新CM 15秒", 15),
+                self._v("v0000000002", "chB", "新CM 30秒", 30)]
+        self.assertEqual(len(fetch.dedupe_similar_titles(vids)), 2)
+
+    def test_empty_title_not_merged(self):
+        vids = [self._v("v0000000001", "chA", "", 15),
+                self._v("v0000000002", "chA", "", 30)]
+        self.assertEqual(len(fetch.dedupe_similar_titles(vids)), 2)
+
+    def test_preserves_input_order(self):
+        vids = [self._v("v0000000001", "chA", "作品X 30秒", 30),
+                self._v("v0000000002", "chB", "作品Y", 20),
+                self._v("v0000000003", "chA", "作品X 15秒", 15)]
+        out = fetch.dedupe_similar_titles(vids)
+        self.assertEqual([v["videoId"] for v in out], ["v0000000001", "v0000000002"])
+
+    def test_tiebreak_by_score_then_id(self):
+        # 同尺ならスコア上位。
+        vids = [self._v("v0000000001", "chA", "作品X 15秒", 30, score=40),
+                self._v("v0000000002", "chA", "作品X 30秒", 30, score=80)]
+        out = fetch.dedupe_similar_titles(vids)
+        self.assertEqual([v["videoId"] for v in out], ["v0000000002"])
+
+
 class TestSelectByRatio(unittest.TestCase):
     def _v(self, vid, ch, genre, score):
-        return {"videoId": vid, "channelId": ch, "genre": genre, "score": score}
+        return {"videoId": vid, "channelId": ch, "genre": genre, "score": score,
+                "title": f"title-{vid}"}
 
     def test_per_channel_cap(self):
         # 同一チャンネルは最大2件（スコア上位を残す）。
@@ -579,6 +647,22 @@ class TestSelectByRatio(unittest.TestCase):
         out = fetch.select_by_ratio(vids, max_videos=40, max_per_channel=2)
         self.assertEqual(len(out), 2)
         self.assertEqual([v["score"] for v in out], [90, 89])
+
+    def test_per_channel_cap_default_is_one(self):
+        # 既定は1チャンネル1件。
+        vids = [self._v(f"v{i:010d}", "chA", "cm", 90 - i) for i in range(5)]
+        out = fetch.select_by_ratio(vids, max_videos=40)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["score"], 90)
+
+    def test_longer_cut_wins_channel_slot(self):
+        # 尺違いは集約が先。短尺版のスコアが高くても、1件枠は長尺版が取る。
+        vids = [{"videoId": "v0000000001", "channelId": "chA", "genre": "cm",
+                 "score": 95, "title": "ブランドA CM 15秒", "durationSeconds": 15},
+                {"videoId": "v0000000002", "channelId": "chA", "genre": "cm",
+                 "score": 70, "title": "ブランドA CM 30秒", "durationSeconds": 30}]
+        out = fetch.select_by_ratio(vids, max_videos=40, max_per_channel=1)
+        self.assertEqual([v["videoId"] for v in out], ["v0000000002"])
 
     def test_genre_ratio_split(self):
         # cm/mv/other 各8件。max_videos=10, 4:4:2 → cm4/mv4/other2。
