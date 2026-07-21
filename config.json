@@ -19,7 +19,7 @@
     "min_duration_sec": 15,
     "max_duration_sec": 600,
     "max_candidates": 80,
-    "max_per_channel": 2,
+    "max_per_channel": 1,
     "genre_ratio": { "cm": 0.4, "mv": 0.4, "other": 0.2 },
     "recent_exclude": {
       "enabled": true,
