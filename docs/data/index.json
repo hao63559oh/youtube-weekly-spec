@@ -1,6 +1,11 @@
 {
-  "updatedAt": "2026-08-01T15:58:35Z",
+  "updatedAt": "2026-08-08T15:25:22Z",
   "weeks": [
+    {
+      "week": "2026-W32",
+      "count": 39,
+      "generatedAt": "2026-08-08T15:25:22Z"
+    },
     {
       "week": "2026-W31",
       "count": 37,
